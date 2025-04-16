@@ -1,0 +1,10 @@
+# python compiled
+*.pyc
+
+# model weights
+models/
+*.gguf
+
+# downloaded files
+./notebooks/downloaded/
+*.pdf
