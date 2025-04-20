@@ -2,6 +2,7 @@
 import os, time
 from typing import Iterator
 from llama_cpp import Llama, LLAMA_SPLIT_MODE_LAYER, LLAMA_SPLIT_MODE_ROW, llama_types
+from llama_cpp.llama_speculative import LlamaPromptLookupDecoding
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # Only GPU 1
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"  # Both GPUs
@@ -10,7 +11,7 @@ import torch
 print("Visible CUDA Devices:", torch.cuda.device_count())  # Should show 2
 print("Current Device:", torch.cuda.current_device())  # Should match your priority
 
-MODEL_PATH = "QwQ-32B-Q4_K_M.gguf"
+MODEL_PATH = "models/QwQ-32B-Q4_K_M.gguf"
 CONTEXT_SIZE = int(100e3)  # for both gpus
 # CONTEXT_SIZE = int(10e3)   # for one gpu
 SPLIT_MODE = LLAMA_SPLIT_MODE_LAYER
@@ -18,6 +19,7 @@ SPLIT_MODE = LLAMA_SPLIT_MODE_LAYER
 tensor_split = [0.37176396722521365,0.3910968437984273] # from lm_studio logs
 
 start_time = time.time()  # Record start time before the API call
+
 llm = Llama(
     model_path=os.path.expanduser(MODEL_PATH),
     n_gpu_layers=-1, # all
@@ -30,18 +32,22 @@ llm = Llama(
     flash_attn = True, # Flash attention # don't know if works for QwQ:32b
     numa = 3, # Optimize NUMA allocation
     verbose = False,
-    no_perf = False
+    no_perf = False,
+
+    draft_model=LlamaPromptLookupDecoding(num_pred_tokens=20)
 )
 
-prompt = "Write a single-file app that prints current time and tell me, what time is it."
+# prompt = "Write a single-file app that prints current time and tell me, what time is it."
+prompt = "Я хочу поменять роутер TS-4000 от МТС на какой-нибудь другой и настроить VLESS + Reality на нём. Дай мне пошаговую инструкцию, как это сделать. Опиши все аспекты, от выбора роутера, до прошивки и настройки vpn."
 
-from ..tools.code_writing import code_tool
+# from ..tools.code_writing import code_tool
+# from ..tools.net_search_tool import handle_net_tool, net_tool
 
 response = llm.create_chat_completion(
     messages=[{"role": "user", "content": prompt}],
     temperature=0.7,
-    max_tokens=500,
-    tools=[code_tool],
+    max_tokens=1500,
+    # tools=[net_tool_def],
     stream=False,
     function_call = lambda token, _: tester.callback(token, _)
 )
@@ -56,8 +62,8 @@ if (isinstance(response, Iterator)):
             # Print tokens as they arrive (optional)
             # print(token_text, end="", flush=True)
 
-    print("\n\nFinal response:")
-    print(full_response)
+    # print("\n\nFinal response:")
+    # print(full_response)
 else:
     end_time = time.time()  # Record end time after the API response
     

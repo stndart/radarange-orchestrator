@@ -112,7 +112,7 @@ class MyModel:
                 'type': 'function',
                 'function': {
                     'name': name,
-                    'arguments': dict()
+                    'arguments': ""
                     }
                 }
         
@@ -153,7 +153,7 @@ class MyModel:
         
         return results
     
-    def process_tool_calls(self, text: str, execute: bool = True) -> tuple[lt.ChatCompletionMessageToolCalls, Optional[list[ToolResult]]]:
+    def process_tool_calls(self, text: str, execute: bool = True) -> tuple[lt.ChatCompletionMessageToolCalls, list[ToolResult]]:
         """
         Extracts all <tool_call></tool_call> block from text and optionally executes them
         """
@@ -161,7 +161,7 @@ class MyModel:
         tool_calls: lt.ChatCompletionMessageToolCalls = self.extract_tool_calls(text)
         print(f"Extracted {len(tool_calls)} tool_calls, execution = {execute}")
         if not execute:
-            return tool_calls, None
+            return tool_calls, []
         
         self.state = tool_calls
         results: list[ToolResult] = []
@@ -170,20 +170,20 @@ class MyModel:
             if 'invalid' in tool_call["id"]:
                 # print("invalid tool call")
                 if 'invalid' in tool_call["function"]["name"]:
-                    results.append({
+                    results.append(ToolResult(**{
                         'status': 'Parsing error',
                         'stdout': '',
                         'stderr': 'Tool call missing \'name\' field',
                         'returncode': -1
-                    })
+                    }))
                 else:
                     name = tool_call["function"]["name"]
-                    results.append({
+                    results.append(ToolResult(**{
                         'status': 'Parsing error',
                         'stdout': '',
                         'stderr': f"Error: Tool '{name}' not found.",
                         'returncode': -1
-                    })
+                    }))
             else:
                 name = tool_call["function"]["name"]
                 tool_handler = get_tool_handler(self.tools, name)
@@ -195,18 +195,18 @@ class MyModel:
                 returncode = -1
                 try:
                     tool_result = tool_handler(**tool_call["function"]["arguments"])
-                    stdout = json.dumps(tool_result, indent=2)
+                    stdout = tool_result.model_dump_json()
                     returncode = 0
                 except Exception as e:
                     stderr = f"Error executing tool '{name}': {str(e)}"
                     returncode = -1
                 finally:
-                    results.append({
+                    results.append(ToolResult(**{
                         'status': 'success' if stderr == '' else 'error',
                         'stdout': stdout,
                         'stderr': stderr,
                         'returncode': returncode
-                    })
+                    }))
         
         # print(results)
         return tool_calls, results
@@ -245,7 +245,7 @@ class MyModel:
             for call, result in zip(tool_calls, tool_results):
                 message = {
                     "role": tool_role,
-                    "content": json.dumps(result),
+                    "content": result.model_dump_json(),
                     "tool_call_id": call["id"],
                     "name": call["function"]["name"]
                 }

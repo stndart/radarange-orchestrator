@@ -1,6 +1,6 @@
 from .tool_annotation import Tool, ToolResult, ToolType
 
-tool_def: ToolType = {
+tool_def = ToolType(**{
     "type": "function",
     "function": {
         "name": "search_internet",
@@ -12,13 +12,13 @@ tool_def: ToolType = {
             "required": []
         }
     }
-}
+})
 
 def handle_tool() -> ToolResult:
-    result: ToolResult = {"status": "success", "stdout": "", "stderr": "", "returncode": 0}
+    result = ToolResult(**{"status": "success", "stdout": "", "stderr": "", "returncode": 0})
     return result
 
-tool: Tool = {
+tool = Tool(**{
     "definition": tool_def,
     "handler": handle_tool
-}
+})

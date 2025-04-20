@@ -1,6 +1,6 @@
 from .tool_annotation import ToolResult, ToolType, Tool
 
-scrape_tool_def: ToolType = {
+scrape_tool_def = ToolType(** {
     "type": "function",
     "function": {
         "name": "scrape_web_page",
@@ -20,7 +20,7 @@ scrape_tool_def: ToolType = {
             "required": ["href"]
         }
     }
-}
+})
 
 import requests
 from readability import Document
@@ -51,10 +51,10 @@ def get_clean_page_content(url: str, n_truncate: int):
 def handle_scrape_tool(href: str, truncate_content: int = 10000, source: str = "inference") -> ToolResult:
     if source == "inference":
         print(f"Called scrape_web_page with href: {href}", flush=True)
-    result: ToolResult = {"status": "success", "stdout": get_clean_page_content(href, truncate_content), "stderr": "", "returncode": 0}
+    result = ToolResult(**{"status": "success", "stdout": get_clean_page_content(href, truncate_content), "stderr": "", "returncode": 0})
     return result
 
-scrape_tool: Tool = {
+scrape_tool = Tool(**{
     "definition": scrape_tool_def,
     "handler": handle_scrape_tool
-}
+})

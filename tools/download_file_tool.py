@@ -1,6 +1,6 @@
 from .tool_annotation import ToolResult, ToolType, Tool
 
-download_tool_def: ToolType = {
+download_tool_def = ToolType(**{
     "type": "function",
     "function": {
         "name": "download_file",
@@ -20,7 +20,7 @@ download_tool_def: ToolType = {
             "required": ["href", "filename"]
         }
     }
-}
+})
 
 import requests
 import os
@@ -28,17 +28,15 @@ import os
 def handle_download_tool(href: str, filename: str) -> ToolResult:
     print(f"Called download_file with href: {href} and filename: {filename}", flush=True)
     
-    result: ToolResult = {"status": "success", "stdout": "", "stderr": "", "returncode": 0}
+    result = ToolResult(**{"status": "success", "stdout": "", "stderr": "", "returncode": 0})
     
     filename = os.path.join("downloads", filename)
     
     # Validate URL protocol
     if not href.startswith(('http://', 'https://')):
-        result.update({
-            "status": "error",
-            "stdout": f"Invalid URL protocol: {href}",
-            "returncode": 1
-        })
+        result.status = "error"
+        result.stdout = f"Invalid URL protocol: {href}"
+        result.returncode = 1
         return result
 
     try:
@@ -56,30 +54,24 @@ def handle_download_tool(href: str, filename: str) -> ToolResult:
             
             # Add success message
             file_size = os.path.getsize(filename)
-            result["stdout"] = f"Downloaded {file_size} bytes to {filename}"
+            result.stdout = f"Downloaded {file_size} bytes to {filename}"
 
     except requests.exceptions.RequestException as e:
-        result.update({
-            "status": "error",
-            "stdout": f"Download failed: {str(e)}",
-            "returncode": 1
-        })
+        result.status = "error"
+        result.stdout = f"Download failed: {str(e)}"
+        result.returncode = 1
     except IOError as e:
-        result.update({
-            "status": "error",
-            "stdout": f"File write error: {str(e)}",
-            "returncode": 1
-        })
+        result.status = "error"
+        result.stdout = f"File write error: {str(e)}"
+        result.returncode = 1
     except Exception as e:
-        result.update({
-            "status": "error",
-            "stdout": f"Unexpected error: {str(e)}",
-            "returncode": 1
-        })
+        result.status = "error"
+        result.stdout = f"Unexpected error: {str(e)}"
+        result.returncode = 1
 
     return result
 
-download_tool: Tool = {
+download_tool = Tool(**{
     "definition": download_tool_def,
     "handler": handle_download_tool
-}
+})

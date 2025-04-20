@@ -1,4 +1,6 @@
-code_tool = {
+from .tool_annotation import *
+
+code_tool = ToolType(**{
     "type": "function",
     "function": {
         "name": "write_python_code",
@@ -26,14 +28,14 @@ code_tool = {
             "required": ["filename", "content"]
         }
     }
-}
+})
 
 import subprocess
 import os
 
 CODE_DIR = "generated_code"
 
-def handle_code_tool(filename, content, execute=False, timeout=30):
+def handle_code_tool(filename, content, execute=False, timeout=30) -> ToolResult:
     print(f"Called write_python_code with filename: {filename}", flush=True)
     
     # Create code directory if needed
