@@ -4,9 +4,13 @@ from llama_cpp import Llama, LLAMA_SPLIT_MODE_LAYER, LLAMA_SPLIT_MODE_ROW, llama
 
 from .tools.tool_annotation import *
 
+class LLMMessage(TypedDict):
+    role: str
+    content: str
+
 class MyModel:
     def __init__(self, model_path: str = "QwQ-32B-Q4_K_M.gguf",
-                 gpus: list[int] = [0, 1], ctx_size: Optional[int] = None, split_mode = LLAMA_SPLIT_MODE_LAYER,
+                 gpus: list[int] = [0, 1], split_mode = LLAMA_SPLIT_MODE_LAYER,
                  tools: list[Tool] = []):
         self.MODEL_PATH = model_path
         self.GPUS = gpus

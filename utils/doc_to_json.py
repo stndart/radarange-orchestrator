@@ -1,15 +1,17 @@
+from functools import wraps
 import inspect
 from typing import Dict, Any, Callable
 from ..tools.tool_annotation import *
 
 def function_to_json(func: Callable) -> ToolType:
     """Converts a Python function to the specified JSON schema format."""
-    PYTHON_TO_JSON_TYPES = {
-        int: 'number',
+    PYTHON_TO_JSON_TYPES: dict[type, ParameterType] = {
+        int: 'integer',
         float: 'number',
         str: 'string',
         bool: 'boolean',
-        type(None): 'null',
+        list: 'array',
+        type(None): 'object',
     }
 
     func_name = func.__name__
@@ -28,7 +30,7 @@ def function_to_json(func: Callable) -> ToolType:
 
         # Determine parameter type
         param_type = param.annotation
-        json_type = 'string'  # Default if type is missing or unrecognized
+        json_type: ParameterType = 'string'  # Default if type is missing or unrecognized
         type_name = 'any'
 
         if param_type is not inspect.Parameter.empty:
@@ -45,27 +47,52 @@ def function_to_json(func: Callable) -> ToolType:
             required.append(param_name)
 
         # Build properties
-        properties[param_name] = ParameterProperty(**{
-            "type": json_type,
-            "description": param_description
-        })
+        properties[param_name] = ParameterProperty(
+            type=json_type,
+            description=param_description
+        )
 
-    parameters_schema = Parameters(**{
-        "type": "object",
-        "properties": properties,
-        "required": required if required else []
-    })
+    parameters_schema = Parameters(
+        type="object",
+        properties=properties,
+        required=required if required else []
+    )
 
-    function_schema = FunctionDescription(**{
-        "name": func_name,
-        "description": description,
-        "parameters": parameters_schema
-    })
+    function_schema = FunctionDescription(
+        name=func_name,
+        description=description,
+        parameters=parameters_schema
+    )
 
-    return ToolType(**{
-        "type": "function",
-        "function": function_schema
-    })
+    return ToolType(
+        type="function",
+        function=function_schema
+    )
+
+def make_tool_from_fun(fun: Callable[..., Any]) -> Tool:
+    tool_def = function_to_json(fun)
+    @wraps(fun)
+    def tool_handler(*args, **kwargs) -> ToolResult:
+        try:
+            res = fun(*args, **kwargs)
+        except Exception as e:
+            return ToolResult(
+                status = "error",
+                stdout = "",
+                stderr = f"Error while executing tool {tool_def.function.name}: {e}, traceback: {e.__traceback__}",
+                returncode = -1
+            )
+        finally:
+            if ToolResult.model_validate(res):
+                return res
+            else:
+                return ToolResult(
+                    status = "success",
+                    stdout = str(res),
+                    stderr = "",
+                    returncode = 0
+                )
+    return Tool(definition=tool_def, handler=tool_handler)
 
 if __name__ == '__main__':
     import json

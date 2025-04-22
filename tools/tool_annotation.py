@@ -3,8 +3,9 @@ from pydantic import BaseModel
 from llama_cpp.llama_types import ChatCompletionTool
 import json
 
+ParameterType = Literal["string", "number", "boolean", "integer", "array", "object"]
 class ParameterProperty(BaseModel):
-    type: Literal["string", "number", "boolean", "integer", "array", "object"]
+    type: ParameterType
     description: str
 
 class Parameters(BaseModel):
@@ -26,6 +27,9 @@ class ToolResult(BaseModel):
     stdout: str
     stderr: str
     returncode: int
+
+def tool_result_to_str(result: ToolResult) -> str:
+    return result.model_dump_json()
     
 ToolHandler = Callable[..., ToolResult]
 
@@ -42,6 +46,11 @@ def get_tool_defs(tools: list[Tool]) -> list[ChatCompletionTool]:
 def get_tool_handler(tools: list[Tool], name: str) -> ToolHandler:
     return next((tool.handler for tool in tools if tool.definition.function.name == name), DefaultToolHandler)
 
-class LLMMessage(TypedDict):
-    role: str
-    content: str
+class ToolCallFunction(BaseModel):
+    name: str
+    arguments: str
+
+class ToolCall(BaseModel):
+    id: str
+    type: Literal["function"]
+    function: ToolCallFunction
