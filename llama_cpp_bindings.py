@@ -14,13 +14,18 @@ def from_chat_completion(model_response: CreateChatCompletionResponse) -> Respon
     tool_calls = model_response["choices"][0]["message"].get("tool_calls", [])
     role = model_response["choices"][0]["message"]["role"]
     assert role == 'assistant'
+    tool_calls = fill_tool_calls(
+        [from_llama_tool_call(call) for call in tool_calls], 
+        none_to_str(model_response["choices"][0]["message"]["content"])
+    )
+    finish_reason = model_response["choices"][0]["finish_reason"]
+    if len(tool_calls) > 0:
+        finish_reason = "tool_call"
+
     return Response(
         content = none_to_str(model_response["choices"][0]["message"]["content"]),
-        tool_calls = fill_tool_calls(
-            [from_llama_tool_call(call) for call in tool_calls], 
-            none_to_str(model_response["choices"][0]["message"]["content"])
-        ),
-        finish_reason = model_response["choices"][0]["finish_reason"],
+        tool_calls=tool_calls,
+        finish_reason=finish_reason,
         role = role
     )
 

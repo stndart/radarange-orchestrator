@@ -33,22 +33,28 @@ class Chat:
         
         return new_chat
 
-    T = TypeVar('T', bound=MessageType)
-    def append(self, message: T) -> T:
+    def append(self, message: MessageType):
         self.history.append(message)
-        return message
 
     def add_user_message(self, prompt: str) -> ChatMessage:
-        return self.append(ChatMessage(role="user", content=prompt))
+        message = ChatMessage(role="user", content=prompt)
+        self.append(message)
+        return message
 
     def add_system_message(self, prompt: str) -> ChatMessage:
-        return self.append(ChatMessage(role="system", content=prompt))
+        message = ChatMessage(role="system", content=prompt)
+        self.append(message)
+        return message
 
     def add_assistant_message(self, prompt: str) -> Response:
-        return self.append(Response(role="assistant", content=prompt, finish_reason="stop"))
+        message = Response(role="assistant", content=prompt, finish_reason="stop")
+        self.append(message)
+        return message
 
     def add_tool_message(self, prompt: str, id: str) -> ToolCallResponse:
-        return self.append(ToolCallResponse(role="tool", content=prompt, tool_call_id=id))
+        message = ToolCallResponse(role="tool", content=prompt, tool_call_id=id)
+        self.append(message)
+        return message
 
     def llama_messages(self) -> list[ChatCompletionRequestMessage]:
         return [to_llama_message(m) for m in self.history]
@@ -57,3 +63,34 @@ class Chat:
         last_message = self.history[-1].content
         text = re.sub(r'<think>.*?</think>', '', last_message, flags=re.DOTALL)
         display(Markdown(text))
+    
+    def __getitem__(self, key: int) -> MessageType:
+        return self.history[key]
+    
+    def get_text(self) -> str:
+        return '\n'.join([f'{c.role}: {c.content}' for c in self.history])
+    
+    def display_thoughts(self):
+        prefix = '''
+        <style>
+        think {
+            display: block;
+            background: #333;
+            border-left: 4px solid #007acc;  # VS Code's blue accent color
+            margin: 10px 0;
+            padding: 10px;
+            color: #fff;
+            white-space: pre-wrap;  # Preserve line breaks
+        }
+        tool_call {
+            display: block;
+            background: #131;
+            border-left: 4px solid #007acc;  # VS Code's blue accent color
+            margin: 10px 0;
+            padding: 10px;
+            color: #fbf;
+            white-space: pre-wrap;  # Preserve line breaks
+        }
+        </style>
+        '''
+        display(HTML(prefix + self.get_text()))

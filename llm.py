@@ -1,6 +1,6 @@
 import os, json
 from typing import Any, Optional, Callable, Iterator
-from llama_cpp import LLAMA_SPLIT_MODE_LAYER, JsonType, Llama
+from llama_cpp import LLAMA_SPLIT_MODE_LAYER, Llama
 
 from .tools.tool_annotation import *
 from .utils import make_tool_from_fun, find_model
@@ -95,7 +95,9 @@ class llm:
                     ))
         return res
     
-    def act(self, prompt: Chat | str, tools: list[Callable[..., Any]] | list[Tool] = [], on_message: MessageHandler = EmptyMessageHandler, temperature: float = 0.7, max_tokens_per_message: int = -1, max_prediction_rounds: int = 1) -> Response:
+    def act(self, prompt: Chat | str, tools: list[Callable[..., Any]] | list[Tool] = [],
+            on_message: MessageHandler = EmptyMessageHandler,
+            temperature: float = 0.7, max_tokens_per_message: int = -1, max_prediction_rounds: int = 3) -> Response:
         chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
         full_tools: list[Tool] = chat.tools + [fun if isinstance(fun, Tool) else make_tool_from_fun(fun) for fun in tools]
 
@@ -103,10 +105,12 @@ class llm:
         for i in range(max_prediction_rounds):
             response = self.respond(chat, tools=tools, temperature=temperature, max_tokens=max_tokens_per_message)
             on_message(response)
+            chat.append(response)
             if response.finish_reason == "tool_call":
                 results: list[ToolResult] = self.invoke_tool_calls(response.tool_calls, full_tools)
                 for call, res in zip(response.tool_calls, results):
                     chat.add_tool_message(tool_result_to_str(res), call.id)
+                    on_message(chat[-1])
             else:
                 break
         return response

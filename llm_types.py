@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Callable
+from typing import Literal, Optional, Callable, TypeVar
 from pydantic import BaseModel
 
 from .tools.tool_annotation import ToolCall
@@ -30,6 +30,7 @@ class ResponseStream:
 
 MessageType = ChatMessage | ToolCallResponse | Response
 
-MessageHandler = Callable[[Response], Optional[ChatMessage]]
+_T = TypeVar("_T", bound=MessageType)
+MessageHandler = Callable[[_T], Optional[_T]]
 def EmptyMessageHandler(response: Response):
     pass

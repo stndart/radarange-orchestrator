@@ -1,9 +1,9 @@
 from collections import defaultdict
-from ...old.my_model import MyModel
-from ...old import *
+from ..llm import llm
+from ..tools import pdf_tool, net_tool, download_tool
 
 class CitationAnalysisWorkflow:
-    def __init__(self, model: MyModel, pdf_tool, web_search_tool, download_tool):
+    def __init__(self, model: llm):
         self.model = model
         self.pdf_tool = pdf_tool
         self.web_search = web_search_tool
