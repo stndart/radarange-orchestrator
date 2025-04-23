@@ -6,5 +6,6 @@ models/
 *.gguf
 
 # downloaded files
-./notebooks/downloaded/
+notebooks/downloaded/*
+notebooks/downloads/*
 *.pdf

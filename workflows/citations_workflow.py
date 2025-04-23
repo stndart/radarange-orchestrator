@@ -4,9 +4,8 @@ from ..tools import pdf_tool, net_tool, download_tool
 
 class CitationAnalysisWorkflow:
     def __init__(self, model: llm):
+        self.chat = model.chat(tools = [pdf_tool, net_tool, download_tool])
         self.model = model
-        self.pdf_tool = pdf_tool
-        self.web_search = web_search_tool
         self.download = download_tool
         self.citation_graph = defaultdict(lambda: {"source": None, "count": 0})
 

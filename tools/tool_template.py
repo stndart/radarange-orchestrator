@@ -1,24 +1,33 @@
-from .tool_annotation import Tool, ToolResult, ToolType
+from .tool_annotation import FunctionDescription, Parameters, ParameterProperty, Tool, ToolResult, ToolType
 
-tool_def = ToolType(**{
-    "type": "function",
-    "function": {
-        "name": "search_internet",
-        "description": "",
-        "parameters": {
-            "type": "object",
-            "properties": {
+tool_def = ToolType(
+    type = "function",
+    function = FunctionDescription(
+        name = "search_internet",
+        description = "",
+        parameters = Parameters(
+            type = "object",
+            properties = {
+                "param1": ParameterProperty(
+                    type = "string",
+                    description = "param 1"
+                ),
             },
-            "required": []
-        }
-    }
-})
+            required = []
+        )
+    )
+)
 
 def handle_tool() -> ToolResult:
-    result = ToolResult(**{"status": "success", "stdout": "", "stderr": "", "returncode": 0})
+    result = ToolResult(
+        status = "success",
+        stdout = "",
+        stderr = "",
+        returncode = 0
+    )
     return result
 
-tool = Tool(**{
-    "definition": tool_def,
-    "handler": handle_tool
-})
+tool = Tool(
+    definition = tool_def,
+    handler = handle_tool
+)
