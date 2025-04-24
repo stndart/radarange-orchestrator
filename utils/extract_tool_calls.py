@@ -1,5 +1,11 @@
-import re, json
+import json
+import re
+
 from ..tools.tool_annotation import ToolCall, ToolCallFunction
+
+
+def remove_think_block(text: str) -> str:
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
 tool_call_counter: int = 0
 def extract_tool_calls(text: str, skip_reasoning: bool = True) -> list[ToolCall]:
@@ -20,7 +26,7 @@ def extract_tool_calls(text: str, skip_reasoning: bool = True) -> list[ToolCall]
     # If we need to skip <think> blocks, remove them from the text
     if skip_reasoning:
         # This will remove everything from <think> to </think>, including newlines.
-        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        text = remove_think_block(text)
     
     tag_begin, tag_end = "<tool_call>", "</tool_call>"
     results: list[ToolCall] = []

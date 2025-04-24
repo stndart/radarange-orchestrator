@@ -6,7 +6,9 @@ from llama_cpp.llama_types import ChatCompletionRequestMessage
 from .llama_cpp_bindings import to_llama_message
 from .llm_types import ChatMessage, MessageType, Response, ToolCallResponse
 from .tools.tool_annotation import Tool, ToolHandler
-from .utils import is_list_of, make_tool_from_fun, display_message
+from .utils import display_message, is_list_of, make_tool_from_fun
+from .utils.extract_tool_calls import remove_think_block
+
 
 class Chat:
     def __init__(
@@ -18,7 +20,8 @@ class Chat:
             if prompt != "":
                 self.add_user_message(prompt)
         else:
-            self.append(prompt)
+            if prompt.content != "":
+                self.append(prompt)
 
         self.tools: list[Tool] = []
         if len(tools) > 0:
@@ -63,7 +66,7 @@ class Chat:
 
     def show_final_answer(self, hide_reasoning: bool = True):
         last_message = self.history[-1].content
-        text = re.sub(r"<think>.*?</think>", "", last_message, flags=re.DOTALL)
+        text = remove_think_block(last_message)
         display(Markdown(text))
 
     def __getitem__(self, key: int) -> MessageType:

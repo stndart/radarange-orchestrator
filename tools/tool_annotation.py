@@ -13,10 +13,15 @@ class Parameters(BaseModel):
     properties: dict[str, ParameterProperty]
     required: list[str]
 
+EmptyParameters = Parameters(
+    type = "object",
+    properties = dict(),
+    required = []
+)
 class FunctionDescription(BaseModel):
     name: str
     description: str
-    parameters: Parameters
+    parameters: Parameters = EmptyParameters
 
 class ToolType(BaseModel):
     type: Literal["function"]
@@ -24,9 +29,9 @@ class ToolType(BaseModel):
 
 class ToolResult(BaseModel):
     status: str
-    stdout: str
-    stderr: str
-    returncode: int
+    stdout: str = ""
+    stderr: str = ""
+    returncode: int = 0
 
 def tool_result_to_str(result: ToolResult) -> str:
     return result.model_dump_json()

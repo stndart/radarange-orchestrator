@@ -28,6 +28,7 @@ ls_tool_def = ToolType(
 
 
 def ls_tool_handler(path: str = '.') -> ToolResult:
+    print(f"Called list_directory with path: {path}", flush=True)
     try:
         contents = os.listdir(path)
         return ToolResult(

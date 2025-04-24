@@ -5,6 +5,7 @@ from requests import Response
 
 from radarange_orchestrator.llm_types import MessageType, ToolCallResponse
 from radarange_orchestrator.tools.tool_annotation import ToolResult
+from radarange_orchestrator.utils.extract_tool_calls import remove_think_block
 
 
 def display_thoughts(text: str):
@@ -35,11 +36,15 @@ def display_thoughts(text: str):
 
 def show_final_answer(messages: list[dict], hide_reasoning: bool = True):
     last_message = messages[-1]["choices"][0]["message"]["content"]
-    text = re.sub(r"<think>.*?</think>", "", last_message, flags=re.DOTALL)
+    text = remove_think_block(last_message)
     display(Markdown(text))
 
 
-def display_message(message: MessageType, skip_reasoning: bool = False, truncate_tool_response: bool = True) -> HTML:
+def display_message(
+    message: MessageType,
+    skip_reasoning: bool = False,
+    truncate_tool_response: bool = True,
+) -> HTML:
     background = "#1e1e1e"
     if isinstance(message, ToolCallResponse):
         background = "#03074a"
@@ -75,10 +80,10 @@ def display_message(message: MessageType, skip_reasoning: bool = False, truncate
 
     text = message.content
     if isinstance(message, Response) and skip_reasoning:
-        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        text = remove_think_block(text)
     if isinstance(message, ToolCallResponse) and truncate_tool_response:
         obj = ToolResult(**json.loads(text))
         obj.stdout = obj.stdout[:200]
         text = obj.model_dump_json(indent=2)
 
-    return HTML(prefix + f'<div class="container">{text}</div>')
+    return HTML(prefix + f'<body><div class="container">{text}</div></body>')
