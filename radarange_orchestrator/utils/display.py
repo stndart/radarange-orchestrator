@@ -1,5 +1,4 @@
 import json
-import re
 from IPython.display import display, Markdown, HTML
 from requests import Response
 

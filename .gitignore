@@ -2,10 +2,10 @@
 *.pyc
 
 # model weights
-models/
 *.gguf
 
 # downloaded files
-notebooks/downloaded/*
 notebooks/downloads/*
-*.pdf
+
+uv.lock
+radarange_orchestrator.egg-info 

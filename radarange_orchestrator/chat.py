@@ -1,6 +1,3 @@
-import re
-
-from IPython.display import HTML, Markdown, display
 from llama_cpp.llama_types import ChatCompletionRequestMessage
 
 from .llama_cpp_bindings import to_llama_message
