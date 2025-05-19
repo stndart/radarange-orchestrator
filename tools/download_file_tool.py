@@ -85,6 +85,11 @@ def handle_download_tool(href: str, filename: str) -> ToolResult:
         result.returncode = 1
 
     print(f"Taken {time.time() - ts:.1f} seconds to complete.")
+    if result.status == "error":
+        if len(result.stdout) > 150:
+            print(f"Tool evaluation led to error: {result.stdout[:100]} ... {result.stdout[-50:]}")
+        else:
+            print(f"Tool evaluation led to error: {result.stdout}")
     return result
 
 

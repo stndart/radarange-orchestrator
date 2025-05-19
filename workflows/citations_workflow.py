@@ -6,7 +6,6 @@ class CitationAnalysisWorkflow:
     def __init__(self, model: llm):
         self.chat = model.chat(tools = [pdf_tool, net_tool, download_tool])
         self.model = model
-        self.download = download_tool
         self.citation_graph = defaultdict(lambda: {"source": None, "count": 0})
 
     async def process_article(self, article_path):

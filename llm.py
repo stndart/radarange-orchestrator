@@ -50,7 +50,10 @@ class llm:
 
         self.model_path = find_model(model)
         self.config = config
-
+        
+        self.init_model()
+    
+    def init_model(self):
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, self.config.gpus))
 
         # fit all the context and weights on gpu to perform 30 t/s
@@ -105,6 +108,9 @@ class llm:
         response_format: Optional[str] = None,
         grammar: Optional[LlamaGrammar] = None,
     ) -> Response:
+        if not hasattr(self, 'llm') or self.llm is None:
+            self.init_model()
+        
         if isinstance(prompt, str):
             return self.respond(
                 Chat(prompt),

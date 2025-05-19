@@ -75,6 +75,11 @@ def handle_scrape_tool(
     )
     if source == "inference":
         print(f"Taken {time.time() - ts:.1f} seconds to complete.")
+        if result.status == "error":
+            if len(result.stderr) > 150:
+                print(f"Tool evaluation led to error: {result.stderr[:100]} ... {result.stderr[-50:]}")
+            else:
+                print(f"Tool evaluation led to error: {result.stderr}")
     return result
 
 

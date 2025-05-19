@@ -72,6 +72,11 @@ def handle_net_tool(
             status="success", stdout=json.dumps(new_results), stderr="", returncode=0
         )
     print(f"Taken {time.time() - ts:.1f} seconds to complete.")
+    if res.status == "error":
+        if len(res.stderr) > 150:
+            print(f"Tool evaluation led to error: {res.stderr[:100]} ... {res.stderr[-50:]}")
+        else:
+            print(f"Tool evaluation led to error: {res.stderr}")
     return res
 
 
