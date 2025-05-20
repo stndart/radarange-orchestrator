@@ -64,4 +64,4 @@ class LMSModel(GenericModel):
         else:
             print(history)
             response: lms.PredictionResult = self.model.respond(history=history)
-            return AssistantMessage(content=response.content)
+            return AssistantMessage(content=response.content, finish_reason='stop')

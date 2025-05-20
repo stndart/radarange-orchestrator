@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Callable, Literal, Optional, TypeVar
 
 from pydantic import BaseModel
 
@@ -36,3 +36,11 @@ AnyChatMessage = SystemPrompt | UserMessage | AssistantMessage | ToolCallRespons
 
 class AssistantMessageFragment(BaseModel):
     content: str
+
+
+_T = TypeVar('_T', bound=AnyChatMessage)
+MessageHandler = Callable[[_T], Optional[_T]]
+
+
+def EmptyMessageHandler(response: AssistantMessage):
+    pass

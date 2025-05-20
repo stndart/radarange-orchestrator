@@ -5,14 +5,17 @@ from .types.tools import Tool, ToolHandler
 from .utils import display_message, is_list_of, make_tool_from_fun
 from .utils.extract_tool_calls import remove_think_block
 class Chat:
-    history: list[AnyChatMessage] = []
-    tools: list[Tool] = []
+    history: list[AnyChatMessage]
+    tools: list[Tool]
 
     def __init__(
         self,
         prompt: str | AnyChatMessage = '',
         tools: list[ToolHandler] | list[Tool] = [],
     ):
+        self.history = []
+        self.tools = []
+
         if isinstance(prompt, str):
             if prompt != '':
                 self.add_user_message(prompt)
@@ -29,7 +32,7 @@ class Chat:
     def copy(self) -> 'Chat':
         new_chat = Chat()
         new_chat.tools = self.tools  # no need to copy since tools are const
-        for message in self.history:
+        for i, message in enumerate(self.history):
             new_chat.append(message.model_copy(deep=True))
 
         return new_chat

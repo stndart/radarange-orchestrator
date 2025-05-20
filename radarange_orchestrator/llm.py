@@ -1,11 +1,22 @@
+import json
 from typing import Any, Callable, Iterator, Optional
 
+from .chat import Chat
 from .config import DEFAULT_LLM_MODEL
 from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
+
 # from .tools.grammar_switch_tool import GrammarContext, create_set_grammar_tool
-from .types.history import AssistantMessage, AssistantMessageFragment, SystemPrompt, UserMessage
-from .types.tools import Tool, ToolHandler
-from .chat import Chat
+from .types.history import (
+    AssistantMessage,
+    AssistantMessageFragment,
+    EmptyMessageHandler,
+    MessageHandler,
+    SystemPrompt,
+    UserMessage,
+)
+from .types.tools import Tool, ToolHandler, ToolRequest, ToolResult
+from .utils.doc_to_json import make_tool_from_fun
+
 
 class llm:
     config: LLM_Config
@@ -33,15 +44,15 @@ class llm:
         max_tokens: int = -1,
         response_format: Optional[str] = None,
     ) -> Iterator[AssistantMessageFragment]:
-        
         chat = prompt if isinstance(prompt, Chat) else UserMessage(prompt)
-        
+
         chat_completion = self.model.create_chat_completion(
-            chat, tools,
+            chat,
+            tools,
             response_format=response_format,
             temperature=temperature,
             max_tokens=max_tokens,
-            stream=True
+            stream=True,
         )
         return chat_completion
 
@@ -53,88 +64,89 @@ class llm:
         max_tokens: int = -1,
         response_format: Optional[str] = None,
     ) -> AssistantMessage:
-        
         chat: Chat = prompt if isinstance(prompt, Chat) else Chat()
         if not isinstance(prompt, Chat):
             chat.add_user_message(prompt)
-        
+
         chat_completion = self.model.create_chat_completion(
-            chat, tools,
+            chat,
+            tools,
             response_format=response_format,
             temperature=temperature,
             max_tokens=max_tokens,
-            stream=False
+            stream=False,
         )
         return chat_completion
 
-#     def invoke_tool_calls(
-#         self, tool_calls: list[ToolCall], tools: list[Tool]
-#     ) -> list[ToolResult]:
-#         def find_tool(name: str) -> Optional[Tool]:
-#             for t in tools:
-#                 if t.definition.function.name == name:
-#                     return t
+    def invoke_tool_calls(
+        self, tool_calls: list[ToolRequest], tools: list[Tool]
+    ) -> list[ToolResult]:
+        def find_tool(name: str) -> Optional[Tool]:
+            for t in tools:
+                if t.definition.function.name == name:
+                    return t
 
-#         res: list[ToolResult] = []
-#         for call in tool_calls:
-#             tool = find_tool(call.function.name)
-#             if not tool:
-#                 res.append(
-#                     ToolResult(
-#                         status='error',
-#                         stdout='',
-#                         stderr='Tool call format error',
-#                         returncode=-1,
-#                     )
-#                 )
-#             else:
-#                 try:
-#                     res.append(tool.handler(**json.loads(call.function.arguments)))
-#                 except Exception as e:
-#                     res.append(
-#                         ToolResult(
-#                             status='error',
-#                             stdout='',
-#                             stderr=f'Tool call error: {e}\nTraceback: {e.__traceback__}',
-#                             returncode=-1,
-#                         )
-#                     )
-#         return res
+        res: list[ToolResult] = []
+        for call in tool_calls:
+            tool = find_tool(call.name)
+            if not tool:
+                res.append(
+                    ToolResult(
+                        status='error',
+                        stdout='',
+                        stderr='Tool call format error',
+                        returncode=-1,
+                    )
+                )
+            else:
+                try:
+                    res.append(tool.handler(**json.loads(call.arguments)))
+                except Exception as e:
+                    res.append(
+                        ToolResult(
+                            status='error',
+                            stdout='',
+                            stderr=f'Tool call error: {e}\nTraceback: {e.__traceback__}',
+                            returncode=-1,
+                        )
+                    )
+        return res
 
-#     def act(
-#         self,
-#         prompt: Chat | str,
-#         tools: list[ToolHandler] | list[Tool] = [],
-#         on_message: MessageHandler = EmptyMessageHandler,
-#         temperature: float = 0.7,
-#         max_tokens_per_message: int = -1,
-#         max_prediction_rounds: int = 3,
-#     ) -> AssistantMessage:
-#         chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
-#         tools = [
-#             fun if isinstance(fun, Tool) else make_tool_from_fun(fun) for fun in tools
-#         ]
+    def act(
+        self,
+        prompt: Chat | str,
+        tools: list[ToolHandler] | list[Tool] = [],
+        on_message: MessageHandler = EmptyMessageHandler,
+        temperature: float = 0.7,
+        max_tokens_per_message: int = -1,
+        max_prediction_rounds: int = 3,
+    ) -> AssistantMessage:
+        chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
+        tools = [
+            fun if isinstance(fun, Tool) else make_tool_from_fun(fun) for fun in tools
+        ]
 
-#         assert max_prediction_rounds > 0
-#         for i in range(max_prediction_rounds):
-#             response = self.respond(
-#                 chat,
-#                 tools=tools,
-#                 temperature=temperature,
-#                 max_tokens=max_tokens_per_message,
-#             )
-#             on_message(response)
-#             chat.append(response)
-#             if response.finish_reason == 'tool_call':
-#                 results: list[ToolResult] = self.invoke_tool_calls(
-#                     response.tool_calls, chat.tools + tools
-#                 )
-#                 for call, res in zip(response.tool_calls, results):
-#                     chat.add_tool_message(tool_result_to_str(res), call.id)
-#                     on_message(chat[-1])
-#             else:
-#                 break
-#         return response
+        assert max_prediction_rounds > 0
+        for i in range(max_prediction_rounds):
+            response: AssistantMessage = self.respond(
+                chat,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens_per_message,
+            )
+            on_message(response)
+            chat.append(response)
+            if response.finish_reason == 'tool_call':
+                results: list[ToolResult] = self.invoke_tool_calls(
+                    response.tool_calls, chat.tools + tools
+                )
+                for call, res in zip(response.tool_calls, results):
+                    chat.add_tool_message(res.model_dump_json(), call.id)
+                    on_message(chat[-1])
+            else:
+                break
+        return response
+
 
 #     def act_with_weak_json(
 #         self,

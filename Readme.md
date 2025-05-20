@@ -2,7 +2,25 @@
 
 This package provides orchestration tools for [presumably a larger project, specify the domain if known e.g., radar data processing, distributed computations, etc.].
 
-## Installation
+## Installation [default]
+
+In this mode, you reach the LM Studio server over internet
+
+Installation steps:
+
+1.  Create a virtual environment:
+    ```bash
+    uv venv .venv
+    ```
+
+2.  Install the package in editable mode:
+    ```bash
+    uv pip install -e .
+    ```
+
+3.  Configure LM Studio server address and port in radarange_orchestrator/config.py
+
+## Installation [local]
 
 Before installing, ensure you have the following prerequisites:
 
@@ -19,9 +37,14 @@ Installation steps:
 
 2.  Install the package in editable mode:
     ```bash
-    uv pip install -e .
+    uv pip install -e ".[local]"
     ```
 
 ## Examples
 
 Example usage can be found in the `examples/` directory.
+
+Example can be run via
+```bash
+uv run python examples/example.py
+```

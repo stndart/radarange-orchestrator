@@ -36,6 +36,10 @@ _instances = weakref.WeakSet()
 
 
 class LlamaModel(GenericModel):
+    model_path: str
+    config: LlamaConfig
+    llm: Llama
+
     def __init__(self, model_path: str, config: LlamaConfig):
         global _instances
         _instances.add(self)
