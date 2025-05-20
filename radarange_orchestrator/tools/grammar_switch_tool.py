@@ -1,8 +1,8 @@
 from typing import Optional
 from llama_cpp import LlamaGrammar
-from .tool_annotation import FunctionDescription, Tool, ToolResult, ToolType
+from ..types.tools import FunctionDescription, Tool, ToolResult, ToolDef
 
-grammar_tool_def = ToolType(
+grammar_tool_def = ToolDef(
     type = "function",
     function = FunctionDescription(
         name = "switch_grammar_to_output",

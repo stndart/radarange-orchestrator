@@ -4,16 +4,16 @@ import time
 from duckduckgo_search import DDGS
 
 from .net_scrape_tool import handle_scrape_tool
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     ParameterProperty,
     Parameters,
     Tool,
     ToolResult,
-    ToolType,
+    ToolDef,
 )
 
-net_tool_def = ToolType(
+net_tool_def = ToolDef(
     type="function",
     function=FunctionDescription(
         name="web_search",

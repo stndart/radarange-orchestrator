@@ -1,9 +1,19 @@
-from functools import wraps
 import inspect
-from typing import Dict, Any, Callable
-from ..tools.tool_annotation import *
+from functools import wraps
+from typing import Any, Callable
 
-def function_to_json(func: Callable) -> ToolType:
+from ..types.tools import (
+    FunctionDescription,
+    ParameterProperty,
+    Parameters,
+    ParameterType,
+    Tool,
+    ToolDef,
+    ToolResult,
+)
+
+
+def function_to_json(func: Callable) -> ToolDef:
     """Converts a Python function to the specified JSON schema format."""
     PYTHON_TO_JSON_TYPES: dict[type, ParameterType] = {
         int: 'integer',
@@ -15,8 +25,8 @@ def function_to_json(func: Callable) -> ToolType:
     }
 
     func_name = func.__name__
-    docstring = inspect.getdoc(func) or ""
-    description = docstring.strip() if docstring else ""
+    docstring = inspect.getdoc(func) or ''
+    description = docstring.strip() if docstring else ''
 
     sig = inspect.signature(func)
     parameters = sig.parameters
@@ -30,7 +40,9 @@ def function_to_json(func: Callable) -> ToolType:
 
         # Determine parameter type
         param_type = param.annotation
-        json_type: ParameterType = 'string'  # Default if type is missing or unrecognized
+        json_type: ParameterType = (
+            'string'  # Default if type is missing or unrecognized
+        )
         type_name = 'any'
 
         if param_type is not inspect.Parameter.empty:
@@ -40,7 +52,7 @@ def function_to_json(func: Callable) -> ToolType:
             type_name = 'any'
 
         # Generate parameter description
-        param_description = f"{param_name}: {type_name}"
+        param_description = f'{param_name}: {type_name}'
 
         # Check if required
         if param.default is inspect.Parameter.empty:
@@ -48,51 +60,44 @@ def function_to_json(func: Callable) -> ToolType:
 
         # Build properties
         properties[param_name] = ParameterProperty(
-            type=json_type,
-            description=param_description
+            type=json_type, description=param_description
         )
 
     parameters_schema = Parameters(
-        type="object",
-        properties=properties,
-        required=required if required else []
+        type='object', properties=properties, required=required if required else []
     )
 
     function_schema = FunctionDescription(
-        name=func_name,
-        description=description,
-        parameters=parameters_schema
+        name=func_name, description=description, parameters=parameters_schema
     )
 
-    return ToolType(
-        type="function",
-        function=function_schema
-    )
+    return ToolDef(type='function', function=function_schema)
+
 
 def make_tool_from_fun(fun: Callable[..., Any]) -> Tool:
     tool_def = function_to_json(fun)
+
     @wraps(fun)
     def tool_handler(*args, **kwargs) -> ToolResult:
         try:
             res = fun(*args, **kwargs)
         except Exception as e:
             return ToolResult(
-                status = "error",
-                stdout = "",
-                stderr = f"Error while executing tool {tool_def.function.name}: {e}, traceback: {e.__traceback__}",
-                returncode = -1
+                status='error',
+                stdout='',
+                stderr=f'Error while executing tool {tool_def.function.name}: {e}, traceback: {e.__traceback__}',
+                returncode=-1,
             )
         finally:
             if ToolResult.model_validate(res):
                 return res
             else:
                 return ToolResult(
-                    status = "success",
-                    stdout = str(res),
-                    stderr = "",
-                    returncode = 0
+                    status='success', stdout=str(res), stderr='', returncode=0
                 )
+
     return Tool(definition=tool_def, handler=tool_handler)
+
 
 if __name__ == '__main__':
     import json
@@ -101,5 +106,7 @@ if __name__ == '__main__':
     def multiply(a: float, b: float) -> float:
         """Given two numbers a and b. Returns the product of them."""
         return a * b
-    
-    print(json.dumps(json.loads(function_to_json(multiply).model_dump_json()), indent = 2))
+
+    print(
+        json.dumps(json.loads(function_to_json(multiply).model_dump_json()), indent=2)
+    )

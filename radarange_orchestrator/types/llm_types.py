@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Callable, TypeVar
 from pydantic import BaseModel
 
-from .tools.tool_annotation import ToolCall
+from ..tools.tool_annotation import ToolCall
 from llama_cpp import LLAMA_SPLIT_MODE_NONE, LLAMA_SPLIT_MODE_LAYER, LLAMA_SPLIT_MODE_ROW
 
 class LlmConfig(BaseModel):

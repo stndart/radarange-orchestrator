@@ -1,0 +1,4 @@
+LMSTUDIO_ADDRESS = 'radarange'
+LMSTUDIO_PORT = 1234
+
+DEFAULT_LLM_MODEL = 'qwq-32b@q4_k_m'

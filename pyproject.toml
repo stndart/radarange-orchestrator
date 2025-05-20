@@ -31,9 +31,20 @@ exclude = ["examples*", "models*", "notebooks*", ".venv"]  # Exclude non-package
 [project.scripts]
 download_model = 'models.download_model:main'
 
-[tool.ruff]
-extend-include = ["*.ipynb"]
-
 [tool.uv.pip]
 no-binary = ["llama-cpp-python"]
 config-settings = { "cmake.define.GGML_CUDA" = "on" }
+
+[tool.ruff]
+target-version = 'py310'
+extend-include = ["*.ipynb"]
+exclude = [
+    '.git',
+    '.ruff_cache',
+    '.venv',
+    'venv',
+]
+
+# Configure single quotes
+[tool.ruff.format]
+quote-style = 'single'

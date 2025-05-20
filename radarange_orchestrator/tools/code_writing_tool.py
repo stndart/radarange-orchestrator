@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     ParameterProperty,
     Parameters,

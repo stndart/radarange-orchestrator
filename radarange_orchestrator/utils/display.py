@@ -1,10 +1,11 @@
 import json
-from IPython.display import display, Markdown, HTML
+
+from IPython.display import HTML, Markdown, display
 from requests import Response
 
-from radarange_orchestrator.llm_types import MessageType, ToolCallResponse
-from radarange_orchestrator.tools.tool_annotation import ToolResult
-from radarange_orchestrator.utils.extract_tool_calls import remove_think_block
+from ..types.history import AnyChatMessage, ToolCallResponse
+from ..types.tools import ToolResult
+from .extract_tool_calls import remove_think_block
 
 
 def display_thoughts(text: str):
@@ -34,21 +35,21 @@ def display_thoughts(text: str):
 
 
 def show_final_answer(messages: list[dict], hide_reasoning: bool = True):
-    last_message = messages[-1]["choices"][0]["message"]["content"]
+    last_message = messages[-1]['choices'][0]['message']['content']
     text = remove_think_block(last_message)
     display(Markdown(text))
 
 
 def display_message(
-    message: MessageType,
+    message: AnyChatMessage,
     skip_reasoning: bool = False,
     truncate_tool_response: bool = True,
 ) -> HTML:
-    background = "#1e1e1e"
+    background = '#1e1e1e'
     if isinstance(message, ToolCallResponse):
-        background = "#03074a"
+        background = '#03074a'
     elif isinstance(message, Response):
-        background = "#360228"
+        background = '#360228'
 
     prefix = """
     <style>

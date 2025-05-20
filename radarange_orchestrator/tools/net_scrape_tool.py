@@ -4,16 +4,16 @@ import requests
 from html2text import HTML2Text
 from readability import Document
 
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     ParameterProperty,
     Parameters,
     Tool,
     ToolResult,
-    ToolType,
+    ToolDef,
 )
 
-scrape_tool_def = ToolType(
+scrape_tool_def = ToolDef(
     type="function",
     function=FunctionDescription(
         name="scrape_web_page",

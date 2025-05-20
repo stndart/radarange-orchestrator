@@ -1,14 +1,14 @@
 import os
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     Parameters,
     ParameterProperty,
     Tool,
     ToolResult,
-    ToolType,
+    ToolDef,
 )
 
-ls_tool_def = ToolType(
+ls_tool_def = ToolDef(
     type="function",
     function=FunctionDescription(
         name="list_directory",

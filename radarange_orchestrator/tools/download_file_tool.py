@@ -3,16 +3,16 @@ import time
 
 import requests
 
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     ParameterProperty,
     Parameters,
     Tool,
     ToolResult,
-    ToolType,
+    ToolDef,
 )
 
-download_tool_def = ToolType(
+download_tool_def = ToolDef(
     type="function",
     function=FunctionDescription(
         name="download_file",

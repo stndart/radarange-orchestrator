@@ -3,16 +3,16 @@ import time
 
 import pymupdf
 
-from .tool_annotation import (
+from ..types.tools import (
     FunctionDescription,
     ParameterProperty,
     Parameters,
     Tool,
     ToolResult,
-    ToolType,
+    ToolDef,
 )
 
-pdf_tool_def = ToolType(
+pdf_tool_def = ToolDef(
     type="function",
     function=FunctionDescription(
         name="pdf_read",

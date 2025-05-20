@@ -1,4 +1,4 @@
-from radarange_orchestrator.tools.tool_annotation import Tool
+from ..types.tools import Tool
 
 from .download_file_tool import download_tool
 from .listdir_tool import ls_tool

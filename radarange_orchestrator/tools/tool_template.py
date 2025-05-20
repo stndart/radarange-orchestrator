@@ -1,6 +1,6 @@
-from .tool_annotation import FunctionDescription, Parameters, ParameterProperty, Tool, ToolResult, ToolType
+from ..types.tools import FunctionDescription, Parameters, ParameterProperty, Tool, ToolResult, ToolDef
 
-tool_def = ToolType(
+tool_def = ToolDef(
     type = "function",
     function = FunctionDescription(
         name = "search_internet",
