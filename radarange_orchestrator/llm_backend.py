@@ -4,8 +4,13 @@ from pydantic import BaseModel
 
 from .backend import GenericModel
 from .chat import Chat
-from .types.tools import Tool
-from .types.history import AssistantMessage, AssistantMessageFragment
+from .types.history import (
+    AssistantMessage,
+    AssistantMessageFragment,
+    EmptyMessageHandler,
+    MessageHandler,
+)
+from .types.tools import Tool, ToolHandler
 
 AVAILABLE_BACKEND = Literal['llama_cpp', 'lmstudio', 'local', 'remote']
 
@@ -33,7 +38,7 @@ class Model:
 
         self.init_model()
 
-    def init_model(self):
+    def init_model(self) -> None:
         if self.backend == 'llama_cpp' or self.backend == 'local':
             from .backend import llama_cpp_model
             from .utils import find_model
@@ -51,7 +56,7 @@ class Model:
                 f'{LMSTUDIO_ADDRESS}:{LMSTUDIO_PORT}', self.model_path, config
             )
 
-    def close(self):
+    def close(self) -> None:
         if hasattr(self, 'model'):
             del self.model
 
@@ -70,6 +75,29 @@ class Model:
 
         return self.model.create_chat_completion(
             chat, tools, response_format, grammar, temperature, max_tokens, stream
+        )
+
+    def act(
+        self,
+        chat: Chat,
+        tools: list[Tool] = [],
+        on_message: MessageHandler = EmptyMessageHandler,
+        temperature: float = 0.7,
+        max_tokens_per_message: int = -1,
+        max_prediction_rounds: int = 3,
+    ) -> AssistantMessage:
+        if self.backend != 'lmstudio' and self.backend != 'remote':
+            raise NotImplementedError(
+                f'Model.act is not implemented for {self.backend}'
+            )
+
+        return self.model.act(
+            chat,
+            tools,
+            on_message,
+            temperature,
+            max_tokens_per_message,
+            max_prediction_rounds,
         )
 
     @staticmethod

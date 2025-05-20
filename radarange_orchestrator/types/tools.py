@@ -3,7 +3,14 @@ from typing import Callable, Literal
 from pydantic import BaseModel
 
 ParameterType = Literal['string', 'number', 'boolean', 'integer', 'array', 'object']
-
+parameter_type_map: dict[ParameterType, type] = {
+    'string': str,
+    'number': float,
+    'boolean': bool,
+    'integer': int,
+    'array': list,
+    'object': object
+}
 
 class ParameterProperty(BaseModel):
     type: ParameterType

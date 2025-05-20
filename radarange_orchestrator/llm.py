@@ -127,24 +127,30 @@ class llm:
         ]
 
         assert max_prediction_rounds > 0
-        for i in range(max_prediction_rounds):
-            response: AssistantMessage = self.respond(
-                chat,
-                tools=tools,
-                temperature=temperature,
-                max_tokens=max_tokens_per_message,
-            )
-            on_message(response)
-            chat.append(response)
-            if response.finish_reason == 'tool_call':
-                results: list[ToolResult] = self.invoke_tool_calls(
-                    response.tool_calls, chat.tools + tools
+        if self.model.backend == 'llama_cpp' or self.model.backend == 'local':
+            for i in range(max_prediction_rounds):
+                response: AssistantMessage = self.respond(
+                    chat,
+                    tools=tools,
+                    temperature=temperature,
+                    max_tokens=max_tokens_per_message,
                 )
-                for call, res in zip(response.tool_calls, results):
-                    chat.add_tool_message(res.model_dump_json(), call.id)
-                    on_message(chat[-1])
-            else:
-                break
+                on_message(response)
+                chat.append(response)
+                if response.finish_reason == 'tool_call':
+                    results: list[ToolResult] = self.invoke_tool_calls(
+                        response.tool_calls, chat.tools + tools
+                    )
+                    for call, res in zip(response.tool_calls, results):
+                        chat.add_tool_message(res.model_dump_json(), call.id)
+                        on_message(chat[-1])
+                else:
+                    break
+        elif self.model.backend == 'lmstudio' or self.model.backend == 'remote':
+            response = self.model.act(chat, tools + chat.tools, on_message, temperature, max_tokens_per_message, max_prediction_rounds)
+        else:
+            raise NotImplementedError(f"llm.act is not implemented for {self.model.backend}")
+        
         return response
 
 

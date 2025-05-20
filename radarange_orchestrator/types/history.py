@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from ..types.tools import ToolRequest
 
 MessageRole = Literal['system', 'user', 'assistant', 'tool']
-FinishReason = Literal['stop', 'length', 'tool_call']
+FinishReason = Literal['stop', 'length', 'tool_call', 'interrupt', 'stop_token']
 
 
 class SystemPrompt(BaseModel):
