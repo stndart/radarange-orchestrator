@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "cmake"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,7 +9,6 @@ description = "Orchestration framework for LLM workflows"
 readme = "README.md"
 requires-python = ">=3.10.12"
 dependencies = [
-    "llama-cpp-python>=0.3.9",
     "huggingface-hub>=0.30.1",
     "ipython>=8.35.0",
     "pydantic>=2.11.3",
@@ -18,8 +17,11 @@ dependencies = [
     "html2text>=2025.4.15",
     "readability-lxml>=0.3.2",
     "duckduckgo-search>=8.0.2",
-    "pymupdf>=1.25.5"
+    "pymupdf>=1.25.5",
+    "lmstudio>=1.3.0",
 ]
+[project.optional-dependencies]
+local = ["llama-cpp-python>=0.3.9"]
 
 [tool.setuptools.packages.find]
 where = ["."]  # Search from root directory
