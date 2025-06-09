@@ -94,6 +94,7 @@ class LMSModel(GenericModel):
         lms_config = lms.LlmLoadModelConfig(context_length=config.ctx_size)
 
         self.config = lms_config
+        print(f"Connecting to host: {host}")
         self.client = lms.Client(host)
         self.model = self.client.llm.model(model, ttl=config.ttl, config=lms_config)
 
