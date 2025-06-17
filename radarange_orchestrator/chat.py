@@ -1,9 +1,18 @@
 from IPython.display import Markdown, display
+import os
 
-from .types.history import AnyChatMessage, UserMessage, SystemPrompt, AssistantMessage, ToolCallResponse
+from .types.history import (
+    AnyChatMessage,
+    UserMessage,
+    SystemPrompt,
+    AssistantMessage,
+    ToolCallResponse,
+)
 from .types.tools import Tool, ToolHandler
 from .utils import display_message, is_list_of, make_tool_from_fun
 from .utils.extract_tool_calls import remove_think_block
+
+
 class Chat:
     history: list[AnyChatMessage]
     tools: list[Tool]
@@ -59,6 +68,82 @@ class Chat:
         message = ToolCallResponse(content=prompt, tool_call_id=id)
         self.append(message)
         return message
+
+    @staticmethod
+    def prepare_text_file(filepath: str, absprefix: str = '') -> str:
+        with open(filepath, 'r') as fin:
+            content = fin.read()
+
+        path = os.path.abspath(filepath)
+        if absprefix != '':
+            absprefix = os.path.abspath(absprefix)
+            if path.startswith(absprefix):
+                path = path[len(absprefix) :]
+
+        nlines = content.count('\n')
+        return f'''
+<file name="{path}" from="1" to="{nlines}">
+{content}
+</file>
+'''
+
+    CODE_EXTS = ['.h', '.hpp', '.c', '.cpp', '.cu', '.txt', '.proto', '.py']
+
+    @staticmethod
+    def prepare_code_dir(
+        root: str,
+        exts: list[str] = CODE_EXTS,
+        include_prefix: list[str] = [],
+        exclude_prefix: list[str] = [],
+        verbose: bool = False
+    ) -> str | list[str]:
+        """
+        Walks `root`, including only subdirectories that start with any prefix in `include_prefix` (if provided),
+        and excluding those that start with any prefix in `exclude_prefix`.
+        Wraps each matching file's contents in XML-style tags.
+
+        If `verbose`, returns each file contents separately
+        """
+        response = [f'<project root="{root}">']
+
+        # Determine starting points
+        if include_prefix:
+            starts = [os.path.join(root, p) for p in include_prefix]
+        else:
+            starts = [root]
+
+        seen = set()
+        for start in starts:
+            for dirpath, dirnames, filenames in os.walk(start):
+                # Compute path relative to root, normalized to forward-slashes
+                rel_dir = os.path.relpath(dirpath, root).replace('\\', '/')
+
+                # Skip excluded prefixes
+                if exclude_prefix and any(
+                    rel_dir.startswith(p.rstrip('/')) for p in exclude_prefix
+                ):
+                    # Prevent descending further
+                    dirnames[:] = []
+                    filenames[:] = []
+                    continue
+
+                # Avoid duplicate walks if include_prefix overlap
+                if dirpath in seen:
+                    continue
+                seen.add(dirpath)
+
+                # Process files with matching extensions
+                for file in filenames:
+                    if any(file.endswith(ext) for ext in exts):
+                        full_rel_path = os.path.join(rel_dir, file).replace('\\', '/')
+                        if any(full_rel_path.startswith(p.rstrip('/')) for p in exclude_prefix):
+                            continue
+
+                        full_path = os.path.join(dirpath, file)
+                        response.append(Chat.prepare_text_file(full_path, root))
+
+        response.append('</project>')
+        return '\n'.join(response) if not verbose else response[1:-1]
 
     def show_final_answer(self, hide_reasoning: bool = True) -> Markdown:
         last_message = self.history[-1].content
