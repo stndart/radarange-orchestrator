@@ -2,6 +2,9 @@
 
 This package provides orchestration tools for [presumably a larger project, specify the domain if known e.g., radar data processing, distributed computations, etc.].
 
+**prerequisities**:
+*   **uv:** A fast Python package installer and resolver. (install with `pip install uv`)
+
 ## Installation [default]
 
 In this mode, you reach the LM Studio server over internet
@@ -24,7 +27,6 @@ Installation steps:
 
 Before installing, ensure you have the following prerequisites:
 
-*   **uv:** A fast Python package installer and resolver.
 *   **Visual Studio Build Tools:** Required for compiling native extensions.
 *   **CUDA:** Needed for GPU acceleration (if applicable).
 
@@ -37,8 +39,10 @@ Installation steps:
 
 2.  Install the package in editable mode:
     ```bash
-    uv pip install -e ".[local]"
+    uv pip install -e .[local]
     ```
+
+2.  Open any jupyter notebook, for example, notebooks/base.ipynb, and when prompted, select newly created .venv as python interpreter path
 
 ## Examples
 
