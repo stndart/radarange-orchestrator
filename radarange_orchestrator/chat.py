@@ -145,12 +145,13 @@ class Chat:
         response.append('</project>')
         return '\n'.join(response) if not verbose else response[1:-1]
 
-    def show_final_answer(self, hide_reasoning: bool = True) -> Markdown:
+    def show_final_answer(self, hide_reasoning: bool = True, display_: bool = False) -> Markdown:
         last_message = self.history[-1].content
         if hide_reasoning:
             text = remove_think_block(last_message)
         md = Markdown(text)
-        display(md)
+        if display_:
+            display(md)
         return md
 
     def __getitem__(self, key: int) -> AnyChatMessage:

@@ -8,23 +8,61 @@ from pydantic import BaseModel
 from ..chat import Chat
 from ..llm_backend import LLM_Config
 from ..types.history import (
+    AnyChatMessage,
     AssistantMessage,
     EmptyMessageHandler,
     FinishReason,
     MessageHandler,
+    SystemPrompt,
     ToolCallResponse,
+    UserMessage,
 )
 from ..types.tools import Tool, ToolHandler, ToolResult, parameter_type_map
 from .generic_model import GenericModel
 
 
+def convert_message(message: AnyChatMessage) -> lms.AnyChatMessage:
+    if isinstance(message, SystemPrompt):
+        return lms.SystemPrompt.from_dict(
+            {
+                'role': message.role,
+                'content': [{'type': 'text', 'text': message.content}],
+            }
+        )
+    elif isinstance(message, UserMessage):
+        return lms.UserMessage.from_dict(
+            {
+                'role': message.role,
+                'content': [{'type': 'text', 'text': message.content}],
+            }
+        )
+    elif isinstance(message, AssistantMessage):
+        return lms.AssistantResponse.from_dict(
+            {
+                'role': message.role,
+                'content': [{'type': 'text', 'text': message.content}],
+            }
+        )
+    elif isinstance(message, ToolCallResponse):
+        return lms.ToolResultMessage.from_dict(
+            {
+                'role': message.role,
+                'content': [
+                    {
+                        'type': 'toolCallResult',
+                        'content': message.content,
+                        'toolCallId': str(hash(message.content)),
+                    }
+                ],
+            }
+        )
+    else:
+        raise NotImplementedError(message.__class__)
+
+
 def convert_chat(chat: Chat) -> lms.history.Chat:
     return lms.history.Chat.from_history(
-        {
-            'messages': [
-                {'role': message.role, 'content': message.content} for message in chat
-            ]
-        }
+        {'messages': [convert_message(message).to_dict() for message in chat]}
     )
 
 
@@ -94,7 +132,7 @@ class LMSModel(GenericModel):
         lms_config = lms.LlmLoadModelConfig(context_length=config.ctx_size)
 
         self.config = lms_config
-        print(f"Connecting to host: {host}")
+        print(f'Connecting to host: {host}')
         self.client = lms.Client(host)
         self.model = self.client.llm.model(model, ttl=config.ttl, config=lms_config)
 

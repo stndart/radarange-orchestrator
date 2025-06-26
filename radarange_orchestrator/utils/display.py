@@ -82,8 +82,11 @@ def display_message(
     if isinstance(message, Response) and skip_reasoning:
         text = remove_think_block(text)
     if isinstance(message, ToolCallResponse) and truncate_tool_response:
-        obj = ToolResult(**json.loads(text))
-        obj.stdout = obj.stdout[:200]
-        text = obj.model_dump_json(indent=2)
+        try:
+            obj = ToolResult(**json.loads(text))
+            obj.stdout = obj.stdout[:200]
+            text = obj.model_dump_json(indent=2)
+        except TypeError: # temporary lm studio compatibility bug - text is not json here
+            text = text
 
     return HTML(prefix + f'<body><div class="container">{text}</div></body>')
