@@ -3,6 +3,7 @@ import json
 from typing import Any, Callable, Iterator, Optional
 
 import lmstudio as lms
+from lmstudio._sdk_models import GpuSetting, LlmLoadModelConfig
 from pydantic import BaseModel
 
 from ..chat import Chat
@@ -104,7 +105,8 @@ class LMSConfig(BaseModel):
 
 
 def to_lms_config(config: LLM_Config) -> LMSConfig:
-    return LMSConfig(ctx_size=config.ctx_size)
+    gpu_config = GpuSetting(disabled_gpus=list({0,1} ^ set(config.gpus)))
+    return LMSConfig(gpu=gpu_config, ctx_size=config.ctx_size)
 
 
 def tool_handler_to_impl(handler: ToolHandler) -> Callable[..., str]:

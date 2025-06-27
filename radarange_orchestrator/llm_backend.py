@@ -39,22 +39,23 @@ class Model:
         self.init_model()
 
     def init_model(self) -> None:
-        if self.backend == 'llama_cpp' or self.backend == 'local':
-            from .backend import llama_cpp_model
-            from .utils import find_model
+        match self.backend:
+            case 'llama_cpp' | 'local':
+                from .backend import llama_cpp_model
+                from .utils import find_model
 
-            self.model = llama_cpp_model.LlamaModel(
-                find_model(self.model_path), self.config
-            )
-        elif self.backend == 'lmstudio' or self.backend == 'remote':
-            from .backend import lmstudio_remote_model
-            from .config import LMSTUDIO_ADDRESS, LMSTUDIO_PORT
+                self.model = llama_cpp_model.LlamaModel(
+                    find_model(self.model_path), self.config
+                )
+            case 'lmstudio' | 'remote':
+                from .backend import lmstudio_remote_model
+                from .config import LMSTUDIO_ADDRESS, LMSTUDIO_PORT
 
-            config = lmstudio_remote_model.to_lms_config(self.config)
+                config = lmstudio_remote_model.to_lms_config(self.config)
 
-            self.model = lmstudio_remote_model.LMSModel(
-                f'{LMSTUDIO_ADDRESS}:{LMSTUDIO_PORT}', self.model_path, config
-            )
+                self.model = lmstudio_remote_model.LMSModel(
+                    f'{LMSTUDIO_ADDRESS}:{LMSTUDIO_PORT}', self.model_path, config
+                )
 
     def close(self) -> None:
         if hasattr(self, 'model'):
