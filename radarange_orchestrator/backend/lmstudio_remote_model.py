@@ -98,15 +98,20 @@ def convert_assistant_message(message: lms.AssistantResponse) -> AssistantMessag
         content=text, finish_reason='stop' if n_tools == 0 else 'tool_call'
     )
 
+class Gpu(BaseModel):
+    ratio: float | None = None
+    mainGpu: int | None = None
+    disabledGpus: list[int] | None = []
 
 class LMSConfig(BaseModel):
     ttl: int = 300
+    gpu: Gpu
     ctx_size: int = 80000
 
 
 def to_lms_config(config: LLM_Config) -> LMSConfig:
-    gpu_config = GpuSetting(disabled_gpus=list({0,1} ^ set(config.gpus)))
-    return LMSConfig(gpu=gpu_config, ctx_size=config.ctx_size)
+    gpu_config = Gpu(disabledGpus=list({0,1} ^ set(config.gpus)))
+    return LMSConfig(gpu=gpu_config, ctx_size=config.ctx_size, ttl=config.ttl)
 
 
 def tool_handler_to_impl(handler: ToolHandler) -> Callable[..., str]:
@@ -131,7 +136,7 @@ class LMSModel(GenericModel):
             config = LMSConfig()
 
         # TODO: add fields
-        lms_config = lms.LlmLoadModelConfig(context_length=config.ctx_size)
+        lms_config = lms.LlmLoadModelConfig(gpu=config.gpu.model_dump(), context_length=config.ctx_size)
 
         self.config = lms_config
         print(f'Connecting to host: {host}')

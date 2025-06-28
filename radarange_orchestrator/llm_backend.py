@@ -16,6 +16,7 @@ AVAILABLE_BACKEND = Literal['llama_cpp', 'lmstudio', 'local', 'remote']
 
 
 class LLM_Config(BaseModel):
+    ttl: int = 300
     gpus: list[int] = [0, 1]
     ctx_size: int = 80000
 
