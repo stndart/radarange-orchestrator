@@ -98,10 +98,27 @@ def convert_assistant_message(message: lms.AssistantResponse) -> AssistantMessag
         content=text, finish_reason='stop' if n_tools == 0 else 'tool_call'
     )
 
+
+def convert_tool_list(tools: list[Tool]) -> lms.ToolFunctionDef:
+    return [
+        lms.ToolFunctionDef(
+            name=tool.definition.function.name,
+            description=tool.definition.function.description,
+            parameters={
+                prop: parameter_type_map[prop_value.type]
+                for prop, prop_value in tool.definition.function.parameters.properties.items()
+            },
+            implementation=tool_handler_to_impl(tool.handler),
+        )
+        for tool in tools
+    ]
+
+
 class Gpu(BaseModel):
-    ratio: float | None = None
-    mainGpu: int | None = None
-    disabledGpus: list[int] | None = []
+    ratio: float = 1.0
+    mainGpu: int = 0
+    disabledGpus: list[int] = []
+
 
 class LMSConfig(BaseModel):
     ttl: int = 300
@@ -110,7 +127,7 @@ class LMSConfig(BaseModel):
 
 
 def to_lms_config(config: LLM_Config) -> LMSConfig:
-    gpu_config = Gpu(disabledGpus=list({0,1} ^ set(config.gpus)))
+    gpu_config = Gpu(disabledGpus=list({0, 1} ^ set(config.gpus)))
     return LMSConfig(gpu=gpu_config, ctx_size=config.ctx_size, ttl=config.ttl)
 
 
@@ -136,7 +153,9 @@ class LMSModel(GenericModel):
             config = LMSConfig()
 
         # TODO: add fields
-        lms_config = lms.LlmLoadModelConfig(gpu=config.gpu.model_dump(), context_length=config.ctx_size)
+        lms_config = lms.LlmLoadModelConfig(
+            gpu=config.gpu.model_dump(), context_length=config.ctx_size
+        )
 
         self.config = lms_config
         print(f'Connecting to host: {host}')
@@ -178,18 +197,7 @@ class LMSModel(GenericModel):
         assert max_prediction_rounds > 0
 
         history = convert_chat(chat)
-        tool_defs = [
-            lms.ToolFunctionDef(
-                name=tool.definition.function.name,
-                description=tool.definition.function.description,
-                parameters={
-                    prop: parameter_type_map[prop_value.type]
-                    for prop, prop_value in tool.definition.function.parameters.properties.items()
-                },
-                implementation=tool_handler_to_impl(tool.handler),
-            )
-            for tool in tools
-        ]
+        tool_defs = convert_tool_list(tools)
 
         def on_message_handler(message: lms.AssistantResponse | lms.ToolResultMessage):
             if isinstance(message, lms.AssistantResponse):
@@ -205,6 +213,9 @@ class LMSModel(GenericModel):
                 history.append(message)
             else:
                 raise NotImplementedError('Critical')
+        
+        if max_tokens_per_message == -1:
+            max_tokens_per_message = None
 
         self.model.act(
             history,
