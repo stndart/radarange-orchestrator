@@ -4,6 +4,7 @@ from typing import Any, Callable, Iterator, Optional
 from .chat import Chat
 from .config import DEFAULT_LLM_MODEL
 from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
+from .formatting import ResponseFormat
 
 # from .tools.grammar_switch_tool import GrammarContext, create_set_grammar_tool
 from .types.history import (
@@ -12,7 +13,6 @@ from .types.history import (
     EmptyMessageHandler,
     MessageHandler,
     SystemPrompt,
-    UserMessage,
 )
 from .types.tools import Tool, ToolHandler, ToolRequest, ToolResult
 from .utils.doc_to_json import make_tool_from_fun
@@ -47,6 +47,9 @@ class llm:
 
         self.config = config
         self.model = Model(model, backend, config)
+    
+    def close(self) -> None:
+        self.model.close()
 
     def chat(
         self, system_prompt: str = '', tools: list[Callable[..., Any]] | list[Tool] = []
@@ -63,6 +66,12 @@ class llm:
         """
 
         return Chat(SystemPrompt(content=system_prompt), tools=tools)
+    
+    def count_tokens(self, prompt: str | Chat) -> int:
+        if isinstance(prompt, Chat):
+            raise NotImplementedError('Counting tokens for chat is not yet implemented')
+        
+        return self.model.count_tokens(prompt)
 
     def respond_stream(
         self,
@@ -70,7 +79,7 @@ class llm:
         tools: list[ToolHandler] | list[Tool] = [],
         temperature: float = 0.7,
         max_tokens: int = -1,
-        response_format: Optional[str] = None,
+        response_format: Optional[ResponseFormat] = None,
     ) -> Iterator[AssistantMessageFragment]:
         """
         Generate a streaming response for the given prompt.
@@ -86,7 +95,9 @@ class llm:
             Iterator yielding AssistantMessageFragment chunks as they arrive.
         """
 
-        chat = prompt if isinstance(prompt, Chat) else UserMessage(prompt)
+        chat: Chat = prompt if isinstance(prompt, Chat) else Chat()
+        if not isinstance(prompt, Chat):
+            chat.add_user_message(prompt)
 
         chat_completion = self.model.create_chat_completion(
             chat,
@@ -104,7 +115,7 @@ class llm:
         tools: list[ToolHandler] | list[Tool] = [],
         temperature: float = 0.7,
         max_tokens: int = -1,
-        response_format: Optional[str] = None,
+        response_format: Optional[ResponseFormat] = None,
     ) -> AssistantMessage:
         """
         Generate a complete non-streaming response for the given prompt.

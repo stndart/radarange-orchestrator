@@ -1,10 +1,11 @@
-from functools import wraps
 import json
-from typing import Any, Callable, Iterator, Optional
+from functools import wraps
+from typing import Callable, Iterator, Optional
 
 import lmstudio as lms
-from lmstudio._sdk_models import GpuSetting, LlmLoadModelConfig
 from pydantic import BaseModel
+
+from radarange_orchestrator.formatting import ResponseFormat
 
 from ..chat import Chat
 from ..llm_backend import LLM_Config
@@ -161,13 +162,21 @@ class LMSModel(GenericModel):
         print(f'Connecting to host: {host}')
         self.client = lms.Client(host)
         self.model = self.client.llm.model(model, ttl=config.ttl, config=lms_config)
+    
+    def close(self) -> None:
+        self.model.unload()
+    
+    def count_tokens(self, prompt: str | Chat):
+        if isinstance(prompt, Chat):
+            raise NotImplementedError('Counting tokens for chat is not yet implemented')
+        
+        return self.model.count_tokens(prompt)
 
     def create_chat_completion(
         self,
         chat: Chat,
         tools: list[Tool],
-        response_format: Optional[dict[str, str]] = None,
-        grammar: Optional[Any] = None,  # TODO
+        response_format: Optional[ResponseFormat] = None,
         temperature: float = 0.7,
         max_tokens: int = 5000,
         stream: bool = False,
@@ -179,7 +188,12 @@ class LMSModel(GenericModel):
             response: lms.PredictionStream = self.model.respond_stream(history=history)
             raise NotImplementedError('Stream support for lms is not implemented')
         else:
-            response: lms.PredictionResult = self.model.respond(history=history)
+            # TODO: add tools
+            response: lms.PredictionResult = self.model.respond(
+                history=history,
+                response_format=response_format.json_schema,
+                config={'temperature': temperature, 'maxTokens': max_tokens if max_tokens > 0 else None},
+            )
             return AssistantMessage(
                 content=response.content,
                 finish_reason=convert_finish_reason(response.stats.stop_reason),
@@ -213,7 +227,7 @@ class LMSModel(GenericModel):
                 history.append(message)
             else:
                 raise NotImplementedError('Critical')
-        
+
         if max_tokens_per_message == -1:
             max_tokens_per_message = None
 
