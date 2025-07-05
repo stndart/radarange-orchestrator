@@ -106,7 +106,7 @@ class Model:
 
         if response_format is not None and response_format.__repr__() != '':
             chat.add_system_message(f"""
-            User wants you to answer in following format:
+            User wants you to answer in the following format:
             {response_format.__repr__()}
             """)
 
