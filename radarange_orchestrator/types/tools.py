@@ -3,7 +3,14 @@ from typing import Callable, Literal
 from pydantic import BaseModel
 
 ParameterType = Literal['string', 'number', 'boolean', 'integer', 'array', 'object']
-
+parameter_type_map: dict[ParameterType, type] = {
+    'string': str,
+    'number': float,
+    'boolean': bool,
+    'integer': int,
+    'array': list,
+    'object': object
+}
 
 class ParameterProperty(BaseModel):
     type: ParameterType
@@ -40,10 +47,6 @@ class ToolResult(BaseModel):
     returncode: int = 0
 
 
-def tool_result_to_str(result: ToolResult) -> str:
-    return result.model_dump_json()
-
-
 ToolHandler = Callable[..., ToolResult]
 
 
@@ -62,18 +65,8 @@ def get_tool_handler(tools: list[Tool], name: str) -> ToolHandler:
         DefaultToolHandler,
     )
 
+
 class ToolRequest(BaseModel):
     id: str
     name: str
     arguments: str
-    
-
-# class ToolCallFunction(BaseModel):
-#     name: str
-#     arguments: str
-
-
-# class ToolCall(BaseModel):
-#     id: str
-#     type: Literal['function']
-#     function: ToolCallFunction

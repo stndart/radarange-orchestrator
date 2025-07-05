@@ -1,11 +1,11 @@
-from typing import Literal
+from typing import Callable, Literal, Optional, TypeVar
 
 from pydantic import BaseModel
 
 from ..types.tools import ToolRequest
 
 MessageRole = Literal['system', 'user', 'assistant', 'tool']
-FinishReason = Literal['stop', 'length', 'tool_call']
+FinishReason = Literal['stop', 'length', 'tool_call', 'interrupt', 'stop_token']
 
 
 class SystemPrompt(BaseModel):
@@ -36,3 +36,11 @@ AnyChatMessage = SystemPrompt | UserMessage | AssistantMessage | ToolCallRespons
 
 class AssistantMessageFragment(BaseModel):
     content: str
+
+
+_T = TypeVar('_T', bound=AnyChatMessage)
+MessageHandler = Callable[[_T], Optional[_T]]
+
+
+def EmptyMessageHandler(response: AssistantMessage):
+    pass

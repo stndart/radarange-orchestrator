@@ -6,6 +6,9 @@
 
 # downloaded files
 notebooks/downloads/*
+notebooks/*
+downloads/*
+examples/downloads/*
 
 uv.lock
 radarange_orchestrator.egg-info 

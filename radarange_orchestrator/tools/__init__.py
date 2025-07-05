@@ -1,5 +1,6 @@
 from ..types.tools import Tool
 
+from .time_tool import time_tool
 from .download_file_tool import download_tool
 from .listdir_tool import ls_tool
 from .net_scrape_tool import scrape_tool

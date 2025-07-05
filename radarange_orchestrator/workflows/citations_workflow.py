@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 from ..llm import llm
 from ..tools import pdf_tool, net_tool, download_tool
 

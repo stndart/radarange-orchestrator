@@ -53,6 +53,8 @@ def handle_net_tool(
     )
     ts = time.time()
     results = DDGS().text(query, max_results=max_results)
+    print(f"Taken {time.time() - ts:.1f} seconds to complete search.")
+    ts = time.time()
     if not scrape_pages:
         res = ToolResult(
             status="success", stdout=json.dumps(results), stderr="", returncode=0
@@ -71,7 +73,7 @@ def handle_net_tool(
         res = ToolResult(
             status="success", stdout=json.dumps(new_results), stderr="", returncode=0
         )
-    print(f"Taken {time.time() - ts:.1f} seconds to complete.")
+        print(f"Taken {time.time() - ts:.1f} seconds to complete scraping pages with mean scrape time {(time.time() - ts) / len(results):.1f} seconds.")
     if res.status == "error":
         if len(res.stderr) > 150:
             print(f"Tool evaluation led to error: {res.stderr[:100]} ... {res.stderr[-50:]}")
