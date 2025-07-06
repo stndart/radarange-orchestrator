@@ -20,6 +20,7 @@ dependencies = [
     "pymupdf>=1.25.5",
     "lmstudio>=1.4.0",
     "jsonref>=1.1.0",
+    "docling>=2.40.0",
 ]
 [project.optional-dependencies]
 local = ["llama-cpp-python>=0.3.9"]
