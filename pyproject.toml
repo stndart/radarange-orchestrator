@@ -16,7 +16,6 @@ dependencies = [
     "ipykernel>=6.22.0",
     "html2text>=2025.4.15",
     "readability-lxml>=0.3.2",
-    "duckduckgo-search>=8.0.2",
     "pymupdf>=1.25.5",
     "lmstudio>=1.4.0",
     "jsonref>=1.1.0",
