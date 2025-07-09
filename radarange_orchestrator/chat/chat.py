@@ -80,7 +80,5 @@ class Chat(InMemoryChatMessageHistory):
         Args:
             skip_reasoning: If True, skips displaying thought/reasoning blocks.
         """
-        raise NotImplementedError('Fix annotations before using this')
-
         for message in self.messages:
             display(display_message(message, skip_reasoning))

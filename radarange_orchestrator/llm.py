@@ -247,7 +247,7 @@ User wants you to answer in the following format:
         elif self.model.backend == 'lmstudio':
             response = self.model.act(
                 chat,
-                tools + chat.tools,
+                tools,
                 on_message,
                 temperature,
                 max_tokens_per_message,

@@ -117,25 +117,27 @@ class LMSModel(GenericModel):
         max_prediction_rounds: int = 3,
     ) -> AIMessage:
         assert max_prediction_rounds > 0
-
+        
         all_tools = tools + chat.tools
         all_tools = to_lms_tools(all_tools)
 
         def on_message_handler(message: lms.AssistantResponse | lms.ToolResultMessage):
             if isinstance(message, lms.AssistantResponse):
                 normal_message: AIMessage = from_lms_message(message)
-                chat.add_message(normal_message)
                 on_message(normal_message)
+                if on_message != chat.add_message:
+                    chat.add_message(normal_message)
             elif isinstance(message, lms.ToolResultMessage):
                 for normal_message in from_lms_message(message):
                     on_message(normal_message)
-                    chat.add_message(normal_message)
+                    if on_message != chat.add_message:
+                        chat.add_message(normal_message)
             else:
                 raise NotImplementedError('Critical error: on_message handler received something not assistant response or tool call response')
 
         if max_tokens_per_message == -1:
             max_tokens_per_message = None
-
+        
         self.model.act(
             chat=to_lms_chat(chat),
             tools=all_tools,
