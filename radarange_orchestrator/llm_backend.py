@@ -13,7 +13,7 @@ from .chat import (
 )
 from .config import BACKEND_CAPABILITIES
 from .formatting import ResponseFormat
-from .tools.base import Tool
+from .tools import Tool
 
 AVAILABLE_BACKEND = Literal['llama_cpp', 'lmstudio', 'local', 'remote']
 

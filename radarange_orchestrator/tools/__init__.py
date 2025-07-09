@@ -1,4 +1,4 @@
-from .base import Tool
+from langchain_core.tools import StructuredTool as Tool
 from langchain_core.messages import ToolMessage, ToolCall, InvalidToolCall
 
 from .time_tool import time_tool

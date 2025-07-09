@@ -12,7 +12,7 @@ from .chat import (
 from .config import DEFAULT_LLM_MODEL
 from .formatting import ResponseFormat
 from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
-from .tools import Tool, ToolCall
+from .tools import Tool, ToolCall, InvalidToolCall
 from .utils.doc_to_json import make_tool_from_fun
 
 
@@ -142,7 +142,7 @@ class llm:
         return chat_completion
 
     def invoke_tool_calls(
-        self, tool_calls: list[ToolCall], tools: list[Tool]
+        self, tool_calls: list[ToolCall | InvalidToolCall], tools: list[Tool]
     ) -> list[ToolMessage]:
         """
         Execute a series of tool calls against the provided functions/tools.
@@ -162,7 +162,7 @@ class llm:
 
         res: list[ToolMessage] = []
         for call in tool_calls:
-            tool = find_tool(call['name'])
+            tool = find_tool(call['name']) if call['type'] == 'tool_call' else None
             if not tool:
                 res.append(
                     ToolMessage(
@@ -241,7 +241,7 @@ User wants you to answer in the following format:
                 chat.add_message(response)
                 if response.response_metadata.get('stop_reason', 'stop') == 'tool_call':
                     results: list[ToolMessage] = self.invoke_tool_calls(
-                        response.tool_calls, chat.tools + tools
+                        response.tool_calls + response.invalid_tool_calls, chat.tools + tools
                     )
                     chat.add_messages(results)
                     for message in results:
