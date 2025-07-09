@@ -43,6 +43,12 @@ def flat_json(model: JsonType | BaseModel) -> JsonType:
 
 
 class ResponseFormat:
+    """
+    Wrapper for gbnf grammars.
+    Supports construction via json or pydantic.BaseModel.
+    Stores json schema for backends that do not support gbnf
+    """
+
     json_schema: JsonType
     grammar: Optional[LlamaGrammar] = None
 

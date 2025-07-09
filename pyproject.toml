@@ -19,9 +19,14 @@ dependencies = [
     "pymupdf>=1.25.5",
     "lmstudio>=1.4.0",
     "jsonref>=1.1.0",
+    "langchain>=0.3.26",
 ]
 [project.optional-dependencies]
 local = ["llama-cpp-python>=0.3.9"]
+dev = [
+    "ipywidgets>=8.1.7",
+    "jupyter>=1.1.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]  # Search from root directory

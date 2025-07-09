@@ -2,20 +2,22 @@ from typing import Iterator, Literal, Optional
 
 from pydantic import BaseModel
 
-from radarange_orchestrator.formatting import ResponseFormat
-
 from .backend import GenericModel
-from .chat import Chat
-from .config import BACKEND_CAPABILITIES
-from .types.history import (
-    AssistantMessage,
-    AssistantMessageFragment,
+from .chat import (
+    AIMessage,
+    AIMessageChunk,
+    Chat,
     EmptyMessageHandler,
     MessageHandler,
+    SystemMessage,
 )
-from .types.tools import Tool
+from .config import BACKEND_CAPABILITIES
+from .formatting import ResponseFormat
+from .tools import Tool
 
 AVAILABLE_BACKEND = Literal['llama_cpp', 'lmstudio', 'local', 'remote']
+DEFAULT_LOCAL_BACKEND = 'llama_cpp'
+DEFAULT_REMOTE_BACKEND = 'lmstudio'
 
 
 class LLM_Config(BaseModel):
@@ -25,6 +27,11 @@ class LLM_Config(BaseModel):
 
 
 class Model:
+    """
+    High-level wrapper for LLMs in different backends
+    Delegates various methods such as create_chat_completion() and act() to appropriate backends
+    """
+
     model_path: str
     backend: AVAILABLE_BACKEND
     config: LLM_Config
@@ -40,9 +47,9 @@ class Model:
         self.backend = backend
         match backend:
             case 'local':
-                self.backend = 'llama_cpp'
+                self.backend = DEFAULT_LOCAL_BACKEND
             case 'remote':
-                self.backend = 'lmstudio'
+                self.backend = DEFAULT_REMOTE_BACKEND
 
         self.config = config
 
@@ -82,9 +89,6 @@ class Model:
                 )
 
     def count_tokens(self, prompt: str | Chat) -> int:
-        if isinstance(prompt, Chat):
-            raise NotImplementedError('Counting tokens for chat is not yet implemented')
-
         return self.model.count_tokens(prompt)
 
     def close(self) -> None:
@@ -100,15 +104,19 @@ class Model:
         temperature: float = 0.7,
         max_tokens: int = 5000,
         stream: bool = False,
-    ) -> AssistantMessage | Iterator[AssistantMessageFragment]:
+    ) -> AIMessage | Iterator[AIMessageChunk]:
         if not hasattr(self, 'model'):
             self.init_model()
+        
+        self.model.assure_loaded()
 
         if response_format is not None and response_format.__repr__() != '':
-            chat.add_system_message(f"""
+            chat.add_message(
+                SystemMessage(f"""
             User wants you to answer in the following format:
             {response_format.__repr__()}
             """)
+            )
 
         return self.model.create_chat_completion(
             chat, tools, response_format, temperature, max_tokens, stream
@@ -122,8 +130,14 @@ class Model:
         temperature: float = 0.7,
         max_tokens_per_message: int = -1,
         max_prediction_rounds: int = 3,
-    ) -> AssistantMessage:
-        if self.backend != 'lmstudio':
+    ) -> AIMessage:
+        if not hasattr(self, 'model'):
+            self.init_model()
+        
+        self.model.assure_loaded()
+        
+        # if self.backend != 'lmstudio':
+        if not hasattr(self.model, 'act'):
             raise NotImplementedError(
                 f'Model.act is not implemented for {self.backend}'
             )
@@ -140,7 +154,7 @@ class Model:
     @staticmethod
     def available_models(backend: AVAILABLE_BACKEND = 'remote') -> list[str]:
         if backend == 'llama_cpp' or backend == 'local':
-            from utils import find_model
+            from .utils import find_model
 
             return find_model('*')
         elif backend == 'lmstudio' or backend == 'remote':

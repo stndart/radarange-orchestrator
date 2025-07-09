@@ -2,76 +2,42 @@ import os
 import time
 
 import pymupdf
-
-from ..types.tools import (
-    FunctionDescription,
-    ParameterProperty,
-    Parameters,
-    Tool,
-    ToolResult,
-    ToolDef,
-)
-
-pdf_tool_def = ToolDef(
-    type="function",
-    function=FunctionDescription(
-        name="pdf_read",
-        description="Opens and converts pdf file to text. Returns the list of extracted images filenames and the text content of the file. Note that formula-related text can be wrecked",
-        parameters=Parameters(
-            type="object",
-            properties={
-                "path": ParameterProperty(
-                    type="string",
-                    description="Path to pdf file",
-                ),
-            },
-            required=[],
-        ),
-    ),
-)
+from langchain_core.tools import StructuredTool
 
 
-def pdf_tool_handle(path: str) -> ToolResult:
-    print(f"Called pdf_read with path: {path}", flush=True)
+def pdf_tool_handle(path: str) -> dict:
+    print(f'Called pdf_read with path: {path}', flush=True)
     ts = time.time()
-    try:
-        doc = pymupdf.open(path)
-        text = ""
-        for page in doc:  # iterate the document pages
-            for block in page.get_text("blocks"):
-                text += block[4]
-        images = []
-        image_n = 0
-        images_path = os.path.join(os.path.dirname(path), "images")
-        os.makedirs(images_path, exist_ok=True)
-        for page in doc:
-            for image in page.get_images():
-                fn = os.path.join(images_path, f"im_{image_n}.png")
-                image_n += 1
-                pymupdf.Pixmap(doc, image[0]).save(fn)
-                images.append(fn)
 
-        result = ToolResult(
-            status="success",
-            stdout=f"images: {images};\ncontent: {text}",
-            stderr="",
-            returncode=0,
-        )
-    except Exception as e:
-        result = ToolResult(
-            status="error",
-            stdout="",
-            stderr=f"Pdf parse error: {e}\nTraceback: {e.__traceback__}",
-            returncode=-1,
-        )
+    doc = pymupdf.open(path)
+    text = ''
+    for page in doc:  # iterate the document pages
+        for block in page.get_text('blocks'):
+            text += block[4]
+    images = []
+    image_n = 0
+    images_path = os.path.join(os.path.dirname(path), 'images')
+    os.makedirs(images_path, exist_ok=True)
+    for page in doc:
+        for image in page.get_images():
+            fn = os.path.join(images_path, f'im_{image_n}.png')
+            image_n += 1
+            pymupdf.Pixmap(doc, image[0]).save(fn)
+            images.append(fn)
 
-    print(f"Taken {time.time() - ts:.1f} seconds to complete.")
-    if result.status == "error":
-        if len(result.stderr) > 150:
-            print(f"Tool evaluation led to error: {result.stderr[:100]} ... {result.stderr[-50:]}")
-        else:
-            print(f"Tool evaluation led to error: {result.stderr}")
+    result = {'content': text, 'images': images}
+
+    print(f'Taken {time.time() - ts:.1f} seconds to complete.')
     return result
 
 
-pdf_tool = Tool(definition=pdf_tool_def, handler=pdf_tool_handle)
+TOOLNAME = 'pdf_read'
+
+pdf_tool = StructuredTool.from_function(
+    name=TOOLNAME,
+    func=pdf_tool_handle,
+    description='Opens and converts pdf file to markdown text. \
+        Accepts single argument: path to file. \
+        Returns the list of extracted images filenames and the text content of the file. \
+        Note that formula-related text can be wrecked',
+)
