@@ -1,5 +1,5 @@
 import json
-from typing import Optional, overload
+from typing import overload
 
 from llama_cpp import (
     ChatCompletionRequestAssistantMessage,
@@ -10,21 +10,20 @@ from llama_cpp import (
 )
 from llama_cpp.llama_types import (
     ChatCompletionMessageToolCall,
-    ChatCompletionMessageToolCalls,
     ChatCompletionRequestMessage,
     ChatCompletionTool,
     CreateChatCompletionResponse,
 )
 
-from radarange_orchestrator.chat.chat import Chat
-from radarange_orchestrator.chat.messages import (
+from ..chat.chat import Chat
+from ..chat.messages import (
     AIMessage,
     AnyCompleteMessage,
     HumanMessage,
     SystemMessage,
     ToolMessage,
 )
-from radarange_orchestrator.tools import Tool, ToolCall
+from ..tools import Tool, ToolCall
 
 
 @overload
@@ -86,7 +85,7 @@ def from_llama_message(
     | CreateChatCompletionResponse,
 ) -> AnyCompleteMessage:
     stop_reason = 'stop'
-    
+
     # if isinstance(message, CreateChatCompletionResponse):
     if 'role' not in message:
         stop_reason = message['choices'][0]['finish_reason']

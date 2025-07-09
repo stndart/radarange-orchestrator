@@ -11,14 +11,13 @@ from llama_cpp import (
 )
 from pydantic import BaseModel
 
-from radarange_orchestrator.chat import Chat, AIMessage
-from radarange_orchestrator.tools import Tool
-from radarange_orchestrator.formatting import ResponseFormat
-from radarange_orchestrator.llm_backend import LLM_Config
-from radarange_orchestrator.utils.extract_tool_calls import extract_tool_calls
-
+from ..chat import AIMessage, Chat
+from ..formatting import ResponseFormat
+from ..llm_backend import LLM_Config
+from ..tools import Tool
+from ..utils.extract_tool_calls import extract_tool_calls
 from .generic_model import GenericModel
-from .llama_cpp_bindings import from_llama_message, to_llama_tools, to_llama_chat
+from .llama_cpp_bindings import from_llama_message, to_llama_chat, to_llama_tools
 
 
 # Since Llama destructs ill while interpreter shutdown

@@ -11,6 +11,8 @@ from .messages import (
     AnyCompleteMessage,
     AnyMessageChunk,
     AnyMessage,
+    MessageHandler,
+    EmptyMessageHandler
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     'AnyCompleteMessage',
     'AnyMessageChunk',
     'AnyMessage',
+    'MessageHandler',
+    'EmptyMessageHandler'
 ]

@@ -4,10 +4,9 @@ from typing import Iterator, Sequence
 from IPython.display import Markdown, display
 from langchain_core.chat_history import InMemoryChatMessageHistory
 
-from radarange_orchestrator.tools.base import Tool
-from radarange_orchestrator.utils import display_message
-from radarange_orchestrator.utils.extract_tool_calls import remove_think_block
-
+from ..tools.base import Tool
+from ..utils import display_message
+from ..utils.extract_tool_calls import remove_think_block
 from .messages import AnyCompleteMessage
 
 

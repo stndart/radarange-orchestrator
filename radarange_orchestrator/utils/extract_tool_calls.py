@@ -1,7 +1,7 @@
 import json
 import re
 
-from radarange_orchestrator.tools import ToolCall, InvalidToolCall
+from ..tools import ToolCall, InvalidToolCall
 
 
 def remove_think_block(text: str) -> str:

@@ -1,20 +1,18 @@
-import json
-from typing import Any, Callable, Iterator, Optional
+from typing import Iterator, Optional
 
-from .chat import Chat
-from .config import DEFAULT_LLM_MODEL
-from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
-from .formatting import ResponseFormat
-
-# from .tools.grammar_switch_tool import GrammarContext, create_set_grammar_tool
-from .types.history import (
-    AssistantMessage,
-    AssistantMessageFragment,
-    EmptyMessageHandler,
+from .chat import (
+    Chat,
+    ToolMessage,
+    AIMessage,
+    AIMessageChunk,
+    SystemMessage,
     MessageHandler,
-    SystemPrompt,
+    EmptyMessageHandler,
 )
-from .types.tools import Tool, ToolHandler, ToolRequest, ToolResult
+from .config import DEFAULT_LLM_MODEL
+from .formatting import ResponseFormat
+from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
+from .tools import Tool, ToolCall
 from .utils.doc_to_json import make_tool_from_fun
 
 
@@ -47,13 +45,11 @@ class llm:
 
         self.config = config
         self.model = Model(model, backend, config)
-    
+
     def close(self) -> None:
         self.model.close()
 
-    def chat(
-        self, system_prompt: str = '', tools: list[Callable[..., Any]] | list[Tool] = []
-    ) -> Chat:
+    def chat(self, system_prompt: str = '', tools: list[Tool] = []) -> Chat:
         """
         Create a new chat session with an optional system prompt and available tools.
 
@@ -65,22 +61,22 @@ class llm:
             A Chat object initialized with the given system prompt and tools.
         """
 
-        return Chat(SystemPrompt(content=system_prompt), tools=tools)
-    
+        return Chat(SystemMessage(content=system_prompt), tools=tools)
+
     def count_tokens(self, prompt: str | Chat) -> int:
         if isinstance(prompt, Chat):
             raise NotImplementedError('Counting tokens for chat is not yet implemented')
-        
+
         return self.model.count_tokens(prompt)
 
     def respond_stream(
         self,
         prompt: Chat | str,
-        tools: list[ToolHandler] | list[Tool] = [],
+        tools: list[Tool] = [],
         temperature: float = 0.7,
         max_tokens: int = -1,
         response_format: Optional[ResponseFormat] = None,
-    ) -> Iterator[AssistantMessageFragment]:
+    ) -> Iterator[AIMessageChunk]:
         """
         Generate a streaming response for the given prompt.
 
@@ -112,11 +108,11 @@ class llm:
     def respond(
         self,
         prompt: Chat | str,
-        tools: list[ToolHandler] | list[Tool] = [],
+        tools: list[Tool] = [],
         temperature: float = 0.7,
         max_tokens: int = -1,
         response_format: Optional[ResponseFormat] = None,
-    ) -> AssistantMessage:
+    ) -> AIMessage:
         """
         Generate a complete non-streaming response for the given prompt.
 
@@ -146,8 +142,8 @@ class llm:
         return chat_completion
 
     def invoke_tool_calls(
-        self, tool_calls: list[ToolRequest], tools: list[Tool]
-    ) -> list[ToolResult]:
+        self, tool_calls: list[ToolCall], tools: list[Tool]
+    ) -> list[ToolMessage]:
         """
         Execute a series of tool calls against the provided functions/tools.
 
@@ -161,31 +157,31 @@ class llm:
 
         def find_tool(name: str) -> Optional[Tool]:
             for t in tools:
-                if t.definition.function.name == name:
+                if t.name == name:
                     return t
 
-        res: list[ToolResult] = []
+        res: list[ToolMessage] = []
         for call in tool_calls:
-            tool = find_tool(call.name)
+            tool = find_tool(call['name'])
             if not tool:
                 res.append(
-                    ToolResult(
+                    ToolMessage(
+                        'Tool call format error',
+                        tool_call_id='invalid_tool_call',
                         status='error',
-                        stdout='',
-                        stderr='Tool call format error',
-                        returncode=-1,
                     )
                 )
             else:
                 try:
-                    res.append(tool.handler(**json.loads(call.arguments)))
+                    res.append(
+                        tool.run(tool_input=call['args'], tool_call_id=call['id'])
+                    )
                 except Exception as e:
                     res.append(
-                        ToolResult(
+                        ToolMessage(
+                            f'Tool call error: {e}\nTraceback: {e.__traceback__}',
+                            tool_call_id='invalid_tool_call',
                             status='error',
-                            stdout='',
-                            stderr=f'Tool call error: {e}\nTraceback: {e.__traceback__}',
-                            returncode=-1,
                         )
                     )
         return res
@@ -193,13 +189,13 @@ class llm:
     def act(
         self,
         prompt: Chat | str,
-        tools: list[ToolHandler] | list[Tool] = [],
+        tools: list[Tool] = [],
         on_message: MessageHandler = EmptyMessageHandler,
         temperature: float = 0.7,
         max_tokens_per_message: int = -1,
         max_prediction_rounds: int = 3,
         response_format: Optional[ResponseFormat] = None,  # BETA
-    ) -> AssistantMessage:
+    ) -> AIMessage:
         """
         Execute a multi-turn interaction where the model generates responses and potentially calls tools.
 
@@ -224,29 +220,32 @@ class llm:
         ]
 
         if response_format is not None and response_format.__repr__() != '':
-            chat.add_system_message(f"""
-            User wants you to answer in the following format:
-            {response_format.__repr__()}
-            """)
+            chat.add_message(
+                SystemMessage(
+                    content=f"""
+User wants you to answer in the following format:
+{response_format.__repr__()}"""
+                )
+            )
 
         assert max_prediction_rounds > 0
         if self.model.backend == 'llama_cpp':
             for i in range(max_prediction_rounds):
-                response: AssistantMessage = self.respond(
+                response: AIMessage = self.respond(
                     chat,
                     tools=tools,
                     temperature=temperature,
                     max_tokens=max_tokens_per_message,
                 )
                 on_message(response)
-                chat.append(response)
-                if response.finish_reason == 'tool_call':
-                    results: list[ToolResult] = self.invoke_tool_calls(
+                chat.add_message(response)
+                if response.response_metadata.get('stop_reason', 'stop') == 'tool_call':
+                    results: list[ToolMessage] = self.invoke_tool_calls(
                         response.tool_calls, chat.tools + tools
                     )
-                    for call, res in zip(response.tool_calls, results):
-                        chat.add_tool_message(res.model_dump_json(), call.id)
-                        on_message(chat[-1])
+                    chat.add_messages(results)
+                    for message in results:
+                        on_message(message)
                 else:
                     break
         elif self.model.backend == 'lmstudio':

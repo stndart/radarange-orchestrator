@@ -1,4 +1,4 @@
-from typing import Annotated, Union
+from typing import Annotated, Callable, Optional, TypeVar, Union
 
 from langchain_core.messages import (
     AIMessage,
@@ -34,3 +34,11 @@ AnyMessageChunk = Annotated[
 ]
 
 AnyMessage = AnyMessageChunk | AnyCompleteMessage
+
+
+T = TypeVar('T', bound=AnyCompleteMessage)
+MessageHandler = Callable[[T], Optional[T]]
+
+
+def EmptyMessageHandler(response: AIMessage):
+    pass
