@@ -127,6 +127,11 @@ class Model:
         max_tokens_per_message: int = -1,
         max_prediction_rounds: int = 3,
     ) -> AIMessage:
+        if not hasattr(self, 'model'):
+            self.init_model()
+        
+        self.model.assure_loaded()
+        
         # if self.backend != 'lmstudio':
         if not hasattr(self.model, 'act'):
             raise NotImplementedError(

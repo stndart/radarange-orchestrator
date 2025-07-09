@@ -13,7 +13,6 @@ from .config import DEFAULT_LLM_MODEL
 from .formatting import ResponseFormat
 from .llm_backend import AVAILABLE_BACKEND, LLM_Config, Model
 from .tools import Tool, ToolCall, InvalidToolCall
-from .utils.doc_to_json import make_tool_from_fun
 
 
 class llm:
@@ -215,9 +214,6 @@ class llm:
         """
 
         chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
-        tools = [
-            fun if isinstance(fun, Tool) else make_tool_from_fun(fun) for fun in tools
-        ]
 
         if response_format is not None and response_format.__repr__() != '':
             chat.add_message(

@@ -2,6 +2,7 @@ from typing import Iterator, Optional
 
 import lmstudio as lms
 from pydantic import BaseModel
+from lmstudio.sync_api import SyncSessionLlm
 
 from ..chat import (
     AIMessage,
@@ -35,6 +36,8 @@ def to_lms_config(config: LLM_Config) -> LMSConfig:
 
 
 class LMSModel(GenericModel):
+    model_id: str
+    default_ttl: int
     config: LMSConfig
     client: lms.Client
     model: lms.LLM
@@ -48,10 +51,13 @@ class LMSModel(GenericModel):
             gpu=config.gpu.model_dump(), context_length=config.ctx_size
         )
 
+        self.model_id = model
+        self.default_ttl = config.ttl
         self.config = lms_config
+
         print(f'Connecting to host: {host}')
         self.client = lms.Client(host)
-        self.model = self.client.llm.model(model, ttl=config.ttl, config=lms_config)
+        self.model = self.client.llm.model(self.model_id, ttl=self.default_ttl, config=self.config)
 
     def close(self) -> None:
         self.model.unload()
@@ -61,6 +67,12 @@ class LMSModel(GenericModel):
             raise NotImplementedError('Counting tokens for chat is not yet implemented')
 
         return self.model.count_tokens(prompt)
+    
+    def assure_loaded(self) -> None:
+        loaded = [m.identifier for m in self.client._get_session(SyncSessionLlm).list_loaded()]
+        if self.model.identifier not in loaded:
+            self.model = self.client.llm.model(self.model_id, ttl=self.default_ttl, config=self.config)
+        
 
     def create_chat_completion(
         self,

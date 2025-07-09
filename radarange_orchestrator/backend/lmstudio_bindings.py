@@ -1,16 +1,16 @@
-from functools import wraps
 import json
-from typing import Literal, overload
+from functools import wraps
+from typing import Any, Literal, overload
 
 import lmstudio as lms
 
 from ..chat import (
-    Chat,
-    AnyCompleteMessage,
     AIMessage,
+    AnyCompleteMessage,
+    Chat,
+    HumanMessage,
     SystemMessage,
     ToolMessage,
-    HumanMessage,
 )
 from ..tools import Tool
 
@@ -146,12 +146,33 @@ def tool_to_fun(tool: Tool):
     return wrapper
 
 
+def to_lms_fun_params(args: dict[str, Any]) -> dict[str, Any]:
+    parameter_type_map: dict[str, type] = {
+        'string': str,
+        'number': float,
+        'boolean': bool,
+        'integer': int,
+        'array': list,
+        'object': object,
+    }
+
+    params = dict()
+    for key in args:
+        if not isinstance(args[key], dict):
+            raise RuntimeError(
+                f'Revice to_lms_fun_params function with argument {args}'
+            )
+
+        params[key] = parameter_type_map[args[key]['type']]
+    return params
+
+
 def to_lms_tools(tools: list[Tool]) -> list[lms.ToolFunctionDef]:
     return [
         lms.ToolFunctionDef(
             name=tool.name,
             description=tool.description,
-            parameters=tool.args,
+            parameters=to_lms_fun_params(tool.args),
             implementation=tool_to_fun(tool),
         )
         for tool in tools
