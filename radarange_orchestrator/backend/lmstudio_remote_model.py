@@ -1,118 +1,20 @@
-import json
-from functools import wraps
-from typing import Callable, Iterator, Optional
+from typing import Iterator, Optional
 
 import lmstudio as lms
 from pydantic import BaseModel
 
-from radarange_orchestrator.formatting import ResponseFormat
-
-from ..chat import Chat
-from ..llm_backend import LLM_Config
-from ..types.history import (
-    AnyChatMessage,
-    AssistantMessage,
+from ..chat import (
+    AIMessage,
+    AIMessageChunk,
+    Chat,
     EmptyMessageHandler,
-    FinishReason,
     MessageHandler,
-    SystemPrompt,
-    ToolCallResponse,
-    UserMessage,
 )
-from ..types.tools import Tool, ToolHandler, ToolResult, parameter_type_map
+from ..formatting import ResponseFormat
+from ..llm_backend import LLM_Config
+from ..tools import Tool
 from .generic_model import GenericModel
-
-
-def convert_message(message: AnyChatMessage) -> lms.AnyChatMessage:
-    if isinstance(message, SystemPrompt):
-        return lms.SystemPrompt.from_dict(
-            {
-                'role': message.role,
-                'content': [{'type': 'text', 'text': message.content}],
-            }
-        )
-    elif isinstance(message, UserMessage):
-        return lms.UserMessage.from_dict(
-            {
-                'role': message.role,
-                'content': [{'type': 'text', 'text': message.content}],
-            }
-        )
-    elif isinstance(message, AssistantMessage):
-        return lms.AssistantResponse.from_dict(
-            {
-                'role': message.role,
-                'content': [{'type': 'text', 'text': message.content}],
-            }
-        )
-    elif isinstance(message, ToolCallResponse):
-        return lms.ToolResultMessage.from_dict(
-            {
-                'role': message.role,
-                'content': [
-                    {
-                        'type': 'toolCallResult',
-                        'content': message.content,
-                        'toolCallId': str(hash(message.content)),
-                    }
-                ],
-            }
-        )
-    else:
-        raise NotImplementedError(message.__class__)
-
-
-def convert_chat(chat: Chat) -> lms.history.Chat:
-    return lms.history.Chat.from_history(
-        {'messages': [convert_message(message).to_dict() for message in chat]}
-    )
-
-
-def convert_finish_reason(
-    finish_reason: lms._sdk_models.LlmPredictionStats,
-) -> FinishReason:
-    finish_reason_mapping: dict[lms._sdk_models.LlmPredictionStats, FinishReason] = {
-        'userStopped': 'interrupt',
-        'modelUnloaded': 'interrupt',
-        'failed': 'interrupt',
-        'eosFound': 'stop',
-        'stopStringFound': 'stop_token',
-        'toolCalls': 'tool_call',
-        'maxPredictedTokensReached': 'length',
-        'contextLengthReached': 'length',
-    }
-    return finish_reason_mapping[finish_reason]
-
-
-def convert_assistant_message(message: lms.AssistantResponse) -> AssistantMessage:
-    text = ''
-    n_tools = 0
-    for token in message.content:
-        text += '\n'
-        if token.type == 'text':
-            text += token.text
-        elif token.type == 'toolCallRequest':
-            n_tools += 1
-            text += json.dumps(token.tool_call_request.to_dict(), indent=2)
-
-    return AssistantMessage(
-        content=text, finish_reason='stop' if n_tools == 0 else 'tool_call'
-    )
-
-
-def convert_tool_list(tools: list[Tool]) -> lms.ToolFunctionDef:
-    return [
-        lms.ToolFunctionDef(
-            name=tool.definition.function.name,
-            description=tool.definition.function.description,
-            parameters={
-                prop: parameter_type_map[prop_value.type]
-                for prop, prop_value in tool.definition.function.parameters.properties.items()
-            },
-            implementation=tool_handler_to_impl(tool.handler),
-        )
-        for tool in tools
-    ]
+from .lmstudio_bindings import from_lms_message, from_lms_response, to_lms_chat, to_lms_tools
 
 
 class Gpu(BaseModel):
@@ -130,18 +32,6 @@ class LMSConfig(BaseModel):
 def to_lms_config(config: LLM_Config) -> LMSConfig:
     gpu_config = Gpu(disabledGpus=list({0, 1} ^ set(config.gpus)))
     return LMSConfig(gpu=gpu_config, ctx_size=config.ctx_size, ttl=config.ttl)
-
-
-def tool_handler_to_impl(handler: ToolHandler) -> Callable[..., str]:
-    @wraps(handler)
-    def wrapper(*args, **kwargs) -> str:
-        res: ToolResult = handler(*args, **kwargs)
-        if res.status == 'success':
-            return res.stdout
-        else:
-            return res.model_dump_json()
-
-    return wrapper
 
 
 class LMSModel(GenericModel):
@@ -162,14 +52,14 @@ class LMSModel(GenericModel):
         print(f'Connecting to host: {host}')
         self.client = lms.Client(host)
         self.model = self.client.llm.model(model, ttl=config.ttl, config=lms_config)
-    
+
     def close(self) -> None:
         self.model.unload()
-    
+
     def count_tokens(self, prompt: str | Chat):
         if isinstance(prompt, Chat):
             raise NotImplementedError('Counting tokens for chat is not yet implemented')
-        
+
         return self.model.count_tokens(prompt)
 
     def create_chat_completion(
@@ -180,24 +70,29 @@ class LMSModel(GenericModel):
         temperature: float = 0.7,
         max_tokens: int = 5000,
         stream: bool = False,
-    ) -> AssistantMessage | Iterator[AssistantMessage]:
-        history = convert_chat(chat)
+    ) -> AIMessage | Iterator[AIMessageChunk]:
+        all_tools = tools + chat.tools
 
         # TODO: add fields
         if stream:
-            response: lms.PredictionStream = self.model.respond_stream(history=history)
+            response: lms.PredictionStream = self.model.respond_stream(
+                history=to_lms_chat(chat)
+            )
             raise NotImplementedError('Stream support for lms is not implemented')
         else:
             # TODO: add tools
+            if len(all_tools) > 0:
+                raise NotImplementedError('Tool support for lms.llm.respond is not implemented')
+
             response: lms.PredictionResult = self.model.respond(
-                history=history,
+                history=to_lms_chat(chat),
                 response_format=response_format.json_schema,
-                config={'temperature': temperature, 'maxTokens': max_tokens if max_tokens > 0 else None},
+                config={
+                    'temperature': temperature,
+                    'maxTokens': max_tokens if max_tokens > 0 else None,
+                },
             )
-            return AssistantMessage(
-                content=response.content,
-                finish_reason=convert_finish_reason(response.stats.stop_reason),
-            )
+            return from_lms_response(response)
 
     def act(
         self,
@@ -207,33 +102,27 @@ class LMSModel(GenericModel):
         temperature: float = 0.7,
         max_tokens_per_message: int = -1,
         max_prediction_rounds: int = 3,
-    ) -> AssistantMessage:
+    ) -> AIMessage:
         assert max_prediction_rounds > 0
-
-        history = convert_chat(chat)
-        tool_defs = convert_tool_list(tools)
 
         def on_message_handler(message: lms.AssistantResponse | lms.ToolResultMessage):
             if isinstance(message, lms.AssistantResponse):
-                normal_message = convert_assistant_message(message)
-                history.append(message)
+                normal_message: AIMessage = from_lms_message(message)
+                chat.add_message(normal_message)
                 on_message(normal_message)
             elif isinstance(message, lms.ToolResultMessage):
-                for token in message.content:
-                    normal_message = ToolCallResponse(
-                        content=token.content, tool_call_id=token.tool_call_id
-                    )
+                for normal_message in from_lms_message(message):
                     on_message(normal_message)
-                history.append(message)
+                    chat.add_message(normal_message)
             else:
-                raise NotImplementedError('Critical')
+                raise NotImplementedError('Critical error: on_message handler received something not assistant response or tool call response')
 
         if max_tokens_per_message == -1:
             max_tokens_per_message = None
 
         self.model.act(
-            history,
-            tool_defs,
+            chat=to_lms_chat(chat),
+            tools=to_lms_tools(tools),
             on_message=on_message_handler,
             max_prediction_rounds=max_prediction_rounds,
             config=lms.LlmPredictionConfig(
@@ -241,6 +130,4 @@ class LMSModel(GenericModel):
             ),
         )
 
-        response: lms.AssistantResponse = history._get_last_message('assistant')
-
-        return convert_assistant_message(response)
+        return chat[-1]
