@@ -84,6 +84,7 @@ class LMSModel(GenericModel):
         stream: bool = False,
     ) -> AIMessage | Iterator[AIMessageChunk]:
         all_tools = tools + chat.tools
+        all_tools = to_lms_tools(all_tools)
 
         # TODO: add fields
         if stream:
@@ -117,6 +118,9 @@ class LMSModel(GenericModel):
     ) -> AIMessage:
         assert max_prediction_rounds > 0
 
+        all_tools = tools + chat.tools
+        all_tools = to_lms_tools(all_tools)
+
         def on_message_handler(message: lms.AssistantResponse | lms.ToolResultMessage):
             if isinstance(message, lms.AssistantResponse):
                 normal_message: AIMessage = from_lms_message(message)
@@ -134,7 +138,7 @@ class LMSModel(GenericModel):
 
         self.model.act(
             chat=to_lms_chat(chat),
-            tools=to_lms_tools(tools),
+            tools=all_tools,
             on_message=on_message_handler,
             max_prediction_rounds=max_prediction_rounds,
             config=lms.LlmPredictionConfig(

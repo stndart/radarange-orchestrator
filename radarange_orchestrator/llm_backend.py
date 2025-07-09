@@ -16,6 +16,8 @@ from .formatting import ResponseFormat
 from .tools import Tool
 
 AVAILABLE_BACKEND = Literal['llama_cpp', 'lmstudio', 'local', 'remote']
+DEFAULT_LOCAL_BACKEND = 'llama_cpp'
+DEFAULT_REMOTE_BACKEND = 'lmstudio'
 
 
 class LLM_Config(BaseModel):
@@ -25,6 +27,11 @@ class LLM_Config(BaseModel):
 
 
 class Model:
+    """
+    High-level wrapper for LLMs in different backends
+    Delegates various methods such as create_chat_completion() and act() to appropriate backends
+    """
+
     model_path: str
     backend: AVAILABLE_BACKEND
     config: LLM_Config
@@ -40,9 +47,9 @@ class Model:
         self.backend = backend
         match backend:
             case 'local':
-                self.backend = 'llama_cpp'
+                self.backend = DEFAULT_LOCAL_BACKEND
             case 'remote':
-                self.backend = 'lmstudio'
+                self.backend = DEFAULT_REMOTE_BACKEND
 
         self.config = config
 
@@ -82,9 +89,6 @@ class Model:
                 )
 
     def count_tokens(self, prompt: str | Chat) -> int:
-        if isinstance(prompt, Chat):
-            raise NotImplementedError('Counting tokens for chat is not yet implemented')
-
         return self.model.count_tokens(prompt)
 
     def close(self) -> None:

@@ -11,6 +11,15 @@ from .messages import AnyCompleteMessage
 
 
 class Chat(InMemoryChatMessageHistory):
+    """
+    Iterable container for AnyCompleteMessage. Stores messages and tools assigned to this context.
+    
+    Has additional output methods:
+    - show_final_answer - exports last message to markdown
+    - get_text - exports full text to string
+    - display_thoughts - renders HTML representation of chat (in jupyter notebook)
+    """
+
     tools: list[Tool] = []
 
     @wraps(InMemoryChatMessageHistory.add_message)

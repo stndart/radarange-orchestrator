@@ -1,8 +1,6 @@
-import json
-
 from IPython.display import HTML, Markdown, display
-from ..chat.messages import AnyCompleteMessage, ToolMessage
-from ..tools import ToolMessage
+
+from ..chat.messages import AnyCompleteMessage
 from .extract_tool_calls import remove_think_block
 
 

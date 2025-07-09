@@ -15,7 +15,8 @@ def extract_tool_calls(
     text: str, skip_reasoning: bool = True
 ) -> list[ToolCall | InvalidToolCall]:
     """
-    Extracts last <tool_call></tool_call> block from text and optionally executes it
+    Extracts a sequence of ToolCall from text.
+    Optionally skips <think></think> block from parsing
     """
     global tool_call_counter
 

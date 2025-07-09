@@ -38,7 +38,7 @@ class llm:
 
         Args:
             model: Name of the language model to use (default is from DEFAULT_LLM_MODEL).
-            backend: The execution environment for the model ('remote', 'local', etc.).
+            backend: The execution environment for the model ('remote', 'local', etc.). See available backends in llm_backend.AVAILABLE_BACKEND.
             config: LLM_Config object containing additional settings.
         """
 
@@ -60,12 +60,11 @@ class llm:
             A Chat object initialized with the given system prompt and tools.
         """
 
-        return Chat(SystemMessage(content=system_prompt), tools=tools)
+        chat = Chat(tools=tools)
+        chat.add_message(SystemMessage(content=system_prompt))
+        return chat
 
     def count_tokens(self, prompt: str | Chat) -> int:
-        if isinstance(prompt, Chat):
-            raise NotImplementedError('Counting tokens for chat is not yet implemented')
-
         return self.model.count_tokens(prompt)
 
     def respond_stream(
@@ -81,13 +80,13 @@ class llm:
 
         Args:
             prompt: User input as a string or existing Chat object.
-            tools: List of functions/tools available during response generation. They will be added to tools from chat.tools.
+            tools: List of langchain StructuredTool available during response generation. They will be added to chat.tools.
             temperature: Controls randomness in output (0.0-1.0, default=0.7).
             max_tokens: Maximum number of tokens to generate (-1 for no limit).
             response_format: Optional format constraint for the response.
 
         Returns:
-            Iterator yielding AssistantMessageFragment chunks as they arrive.
+            Iterator yielding AIMessageChunk chunks as they arrive.
         """
 
         chat: Chat = prompt if isinstance(prompt, Chat) else Chat()
@@ -117,13 +116,13 @@ class llm:
 
         Args:
             prompt: User input as a string or existing Chat object.
-            tools: List of functions/tools available during response generation. They will be added to tools from chat.tools.
+            tools: List of langchain StructuredTool available during response generation. They will be added to chat.tools.
             temperature: Controls randomness in output (0.0-1.0, default=0.7).
             max_tokens: Maximum number of tokens to generate (-1 for no limit).
             response_format: Optional format constraint for the response.
 
         Returns:
-            A complete AssistantMessage containing the generated content.
+            A complete AIMessage containing the generated content.
         """
 
         chat: Chat = prompt if isinstance(prompt, Chat) else Chat()
@@ -147,11 +146,11 @@ class llm:
         Execute a series of tool calls against the provided functions/tools.
 
         Args:
-            tool_calls: List of ToolRequest objects specifying which tools to call.
+            tool_calls: List of ToolCall objects specifying which tools to call.
             tools: Available tools that can be executed.
 
         Returns:
-            List of ToolResult objects containing execution outcomes, including errors.
+            List of ToolMessage objects containing execution outcomes, including errors.
         """
 
         def find_tool(name: str) -> Optional[Tool]:
@@ -203,14 +202,14 @@ class llm:
 
         Args:
             prompt: Starting point as Chat or string (will be accounted as user message).
-            tools: Functions/tools available for execution in this context.
+            tools: langchain StructuredTool tools available for execution in this context.
             on_message: Callback handler triggered when new messages are generated.
             temperature: Controls response randomness (0.0-1.0, default=0.7).
             max_tokens_per_message: Maximum tokens per message generation (-1 for no limit).
             max_prediction_rounds: Max number of reasoning/tool call cycles to perform.
 
         Returns:
-            The final AssistantMessage from the interaction sequence.
+            The final AIMessage from the interaction sequence.
         """
 
         chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
@@ -237,7 +236,8 @@ User wants you to answer in the following format:
                 chat.add_message(response)
                 if response.response_metadata.get('stop_reason', 'stop') == 'tool_call':
                     results: list[ToolMessage] = self.invoke_tool_calls(
-                        response.tool_calls + response.invalid_tool_calls, chat.tools + tools
+                        response.tool_calls + response.invalid_tool_calls,
+                        chat.tools + tools,
                     )
                     chat.add_messages(results)
                     for message in results:
