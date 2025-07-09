@@ -1,7 +1,7 @@
 import atexit
 import os
 import weakref
-from typing import Iterator, Literal, Optional
+from typing import Literal, Optional
 
 from llama_cpp import (
     LLAMA_SPLIT_MODE_LAYER,
@@ -9,23 +9,21 @@ from llama_cpp import (
     LLAMA_SPLIT_MODE_ROW,
     Llama,
 )
-from lmstudio import Chat
 from pydantic import BaseModel
 
+from radarange_orchestrator.chat import Chat, AIMessage
+from radarange_orchestrator.tools import Tool
 from radarange_orchestrator.formatting import ResponseFormat
 from radarange_orchestrator.llm_backend import LLM_Config
-from radarange_orchestrator.types.history import (
-    AssistantMessage,
-    AssistantMessageFragment,
-)
-from radarange_orchestrator.types.tools import Tool
+from radarange_orchestrator.utils.extract_tool_calls import extract_tool_calls
 
 from .generic_model import GenericModel
+from .llama_cpp_bindings import from_llama_message, to_llama_tools, to_llama_chat
 
 
 # Since Llama destructs ill while interpreter shutdown
 @atexit.register
-def _cleanup_all():
+def _cleanup_all() -> None:
     for inst in list(_instances):
         try:
             inst.close()
@@ -38,14 +36,12 @@ class LlamaConfig(BaseModel):
     ctx_size: int = 0
     split_mode: Literal[
         LLAMA_SPLIT_MODE_NONE, LLAMA_SPLIT_MODE_LAYER, LLAMA_SPLIT_MODE_ROW  # type: ignore
-    ]
+    ] = LLAMA_SPLIT_MODE_LAYER
 
 
 def to_llama_cpp_config(config: LLM_Config) -> LlamaConfig:
     return LlamaConfig(
-        gpus=config.gpus,
-        ctx_size=config.ctx_size,
-        split_mode=LLAMA_SPLIT_MODE_LAYER
+        gpus=config.gpus, ctx_size=config.ctx_size, split_mode=LLAMA_SPLIT_MODE_LAYER
     )
 
 
@@ -60,7 +56,7 @@ class LlamaModel(GenericModel):
     def __init__(self, model_path: str, config: Optional[LlamaConfig] = None):
         if config is None:
             config = LlamaConfig()
-        
+
         global _instances
         _instances.add(self)
 
@@ -97,14 +93,14 @@ class LlamaModel(GenericModel):
             numa=3,  # Optimize NUMA allocation
             verbose=False,
         )
-    
+
     def close(self) -> None:
         self.llm.close()
-    
+
     def count_tokens(self, prompt: str | Chat):
         if isinstance(prompt, Chat):
             raise NotImplementedError('Counting tokens for chat is not yet implemented')
-        
+
         return len(self.llm.tokenize(prompt.encode('utf-8')))
 
     def create_chat_completion(
@@ -115,16 +111,18 @@ class LlamaModel(GenericModel):
         temperature: float = 0.7,
         max_tokens: int = 5000,
         stream: bool = False,
-    ) -> AssistantMessage | Iterator[AssistantMessageFragment]:
-        grammar = response_format.grammar
-        assert grammar is not None
+    ) -> AIMessage:
+        grammar = response_format.grammar if response_format else None
+
+        tools = tools + chat.tools
+        tools = to_llama_tools(tools)
 
         if stream:
             raise NotImplementedError('Stream mode is not yet implemented')
         else:
             # response: CreateChatCompletionResponse
             response = self.llm.create_chat_completion(
-                chat,
+                to_llama_chat(chat),
                 tools=tools,
                 grammar=grammar,
                 temperature=temperature,
@@ -132,9 +130,9 @@ class LlamaModel(GenericModel):
                 stream=stream,
             )
 
-            # TODO: add tool call parsing
-            return AssistantMessage(
-                role='assistant',
-                content=response['choices'][0]['message']['content'],
-                finish_reason=response['choices'][0]['finish_reason']
-            )
+            message: AIMessage = from_llama_message(response)
+            message.tool_calls = extract_tool_calls(message.content)
+            if len(message.tool_calls) > 0:
+                message.response_metadata['stop_reason'] = 'tool_call'
+
+            return message

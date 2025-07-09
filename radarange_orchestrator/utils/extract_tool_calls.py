@@ -1,7 +1,7 @@
 import json
 import re
 
-from ..types.tools import ToolRequest
+from radarange_orchestrator.tools import ToolCall, InvalidToolCall
 
 
 def remove_think_block(text: str) -> str:
@@ -11,16 +11,18 @@ def remove_think_block(text: str) -> str:
 tool_call_counter: int = 0
 
 
-def extract_tool_calls(text: str, skip_reasoning: bool = True) -> list[ToolRequest]:
+def extract_tool_calls(
+    text: str, skip_reasoning: bool = True
+) -> list[ToolCall | InvalidToolCall]:
     """
     Extracts last <tool_call></tool_call> block from text and optionally executes it
     """
     global tool_call_counter
 
-    def invalid_tool_call(tool_call_counter: int, name: str = 'invalid') -> ToolRequest:
-        return ToolRequest(
-            id=f'invalid_{tool_call_counter}', type='function', name=name, arguments=''
-        )
+    def invalid_tool_call(
+        tool_call_counter: int, name: str = 'invalid'
+    ) -> InvalidToolCall:
+        return InvalidToolCall(name=name, args='', id=f'invalid_{tool_call_counter}')
 
     # If we need to skip <think> blocks, remove them from the text
     if skip_reasoning:
@@ -28,7 +30,7 @@ def extract_tool_calls(text: str, skip_reasoning: bool = True) -> list[ToolReque
         text = remove_think_block(text)
 
     tag_begin, tag_end = '<tool_call>', '</tool_call>'
-    results: list[ToolRequest] = []
+    results: list[ToolCall | InvalidToolCall] = []
     for tool_block in re.findall(
         rf'{re.escape(tag_begin)}(.*?){re.escape(tag_end)}', text, re.DOTALL
     ):
@@ -41,17 +43,17 @@ def extract_tool_calls(text: str, skip_reasoning: bool = True) -> list[ToolReque
             results.append(invalid_tool_call(tool_call_counter))
         else:
             tool_name = tool_data.get('name')
-            arguments = tool_data.get('arguments', {})
+            args = tool_data.get('arguments', {})
             if not tool_name:
                 results.append(invalid_tool_call(tool_call_counter))
                 continue
 
             results.append(
-                ToolRequest(
-                    id=f'{tool_name}_{tool_call_counter}',
-                    type='function',
+                ToolCall(
                     name=tool_name,
-                    arguments=json.dumps(arguments),
+                    args=args,
+                    id=f'{tool_name}_{tool_call_counter}',
+                    type='tool_call',
                 )
             )
 

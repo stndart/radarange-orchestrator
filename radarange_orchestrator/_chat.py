@@ -1,23 +1,25 @@
 from __future__ import annotations
 
 import os
-from typing import Iterator
+from typing import Iterator, Literal
 
 from IPython.display import Markdown, display
+from pydantic import BaseModel
 
 from .types.history import (
     AnyChatMessage,
     AssistantMessage,
     SystemPrompt,
-    ToolCallResponse,
     UserMessage,
 )
-from .types.tools import Tool, ToolHandler
-from .utils import display_message, is_list_of, make_tool_from_fun
+from .tools import Tool
+from .utils import display_message
 from .utils.extract_tool_calls import remove_think_block
 
+from langchain_core.messages import ToolMessage
 
-class Chat:
+
+class Chat(BaseModel):
     """
     A container class for managing chat history and tool configurations during interactions with an LLM.
 
@@ -32,7 +34,7 @@ class Chat:
     def __init__(
         self,
         prompt: str | AnyChatMessage = '',
-        tools: list[ToolHandler] | list[Tool] = [],
+        tools: list[Tool] = [],
     ):
         """
         Initialize a Chat instance with an optional initial message and available tools.
@@ -43,8 +45,7 @@ class Chat:
                    If not already Tool instances, they will be wrapped using make_tool_from_fun.
         """
 
-        self.history = []
-        self.tools = []
+        super().__init__(history=[], tools=tools)
 
         if isinstance(prompt, str):
             if prompt != '':
@@ -52,12 +53,6 @@ class Chat:
         else:
             if prompt.content != '':
                 self.append(prompt)
-
-        if len(tools) > 0:
-            if is_list_of(tools, Tool):
-                self.tools = tools
-            else:
-                self.tools = [make_tool_from_fun(fun) for fun in tools]  # type: ignore
 
     def copy(self) -> Chat:
         """
@@ -129,7 +124,7 @@ class Chat:
         self.append(message)
         return message
 
-    def add_tool_message(self, prompt: str, id: str) -> ToolCallResponse:
+    def add_tool_message(self, prompt: str, id: str, status: Literal['success', 'error'] = 'success') -> ToolMessage:
         """
         Create and add a tool response to the conversation history.
 
@@ -141,7 +136,11 @@ class Chat:
             Created ToolCallResponse instance added to history.
         """
 
-        message = ToolCallResponse(content=prompt, tool_call_id=id)
+        message = ToolMessage(
+            content=prompt,
+            tool_call_id=id,
+            status=status
+        )
         self.append(message)
         return message
 
@@ -174,7 +173,7 @@ class Chat:
 </file>
 '''
 
-    CODE_EXTS = ['.h', '.hpp', '.c', '.cpp', '.cu', '.txt', '.proto', '.py']
+    CODE_EXTS: list[str] = ['.h', '.hpp', '.c', '.cpp', '.cu', '.txt', '.proto', '.py']
 
     @staticmethod
     def prepare_code_dir(
