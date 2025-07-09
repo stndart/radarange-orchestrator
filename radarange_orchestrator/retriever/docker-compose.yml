@@ -1,0 +1,47 @@
+services:
+  embedder:
+    image: vllm/vllm-openai:latest
+    restart: always
+    container_name: rag.embedder
+    runtime: nvidia
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./healthcheck.embedder.sh:/healthcheck.embedder.sh:ro
+    mem_limit: "10g"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              device_ids: ["0"]
+    entrypoint: ["sh", "-c", "apt-get update && apt-get install -y curl jq && exec python3 -m vllm.entrypoints.openai.api_server --model ${EMBEDDING_MODEL_NAME} --port 12400 --dtype=half --trust-remote-code --gpu_memory_utilization 0.2"]
+    networks:
+      - rag-network
+    ports:
+      - "12400:12400"
+    healthcheck:
+      test: ["CMD", "/bin/bash", "/healthcheck.embedder.sh"]
+      interval: 10m
+      timeout: 5m
+      retries: 10
+      start_period: 10m
+      start_interval: 1m
+
+  storage:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: rag.storage
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+networks:
+  rag-network:
+    name: rag.network
+    driver: bridge
