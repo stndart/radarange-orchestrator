@@ -1,5 +1,10 @@
 import lmstudio as lms
 
+"""
+Runs VLM with image input.
+This is not yet implemented for radarange_orchestrator package
+"""
+
 with lms.Client('192.168.1.10:1234') as client:
     # model = client.llm.model('gemma-3-27b-it-qat', ttl=30)
     model = client.llm.model('gemma-3-27b-it-abliterated', ttl=30)

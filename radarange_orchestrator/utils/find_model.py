@@ -12,6 +12,7 @@ def find_model(path: str) -> list[str] | str:
     # Construct the path to your model file
     model_candidate = os.path.join(BASE_DIR, '../models', path)
     models = glob(model_candidate)
+    models = list(filter(lambda e: e.endswith('.gguf'), models))
 
     if len(models) == 1:
         return models[0]
