@@ -69,7 +69,6 @@ def web_search(
     results = _extract_links(_raw(_instance, query))
 
     print(f'Taken {time.time() - ts:.1f} seconds to complete search.')
-    print(f'web search: {results}')
     if scrape_pages:
         ts = time.time()
         results = [

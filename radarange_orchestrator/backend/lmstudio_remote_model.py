@@ -86,6 +86,8 @@ class LMSModel(GenericModel):
         all_tools = tools + chat.tools
         all_tools = to_lms_tools(all_tools)
 
+        response_format_json = None if response_format is None else response_format.json_schema
+
         # TODO: add fields
         if stream:
             response: lms.PredictionStream = self.model.respond_stream(
@@ -99,13 +101,15 @@ class LMSModel(GenericModel):
 
             response: lms.PredictionResult = self.model.respond(
                 history=to_lms_chat(chat),
-                response_format=response_format.json_schema,
+                response_format=response_format_json,
                 config={
                     'temperature': temperature,
                     'maxTokens': max_tokens if max_tokens > 0 else None,
                 },
             )
-            return from_lms_response(response)
+            message = from_lms_response(response)
+            chat.add_message(message)
+            return message
 
     def act(
         self,

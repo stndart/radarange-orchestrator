@@ -134,4 +134,5 @@ class LlamaModel(GenericModel):
             if len(message.tool_calls) > 0:
                 message.response_metadata['stop_reason'] = 'tool_call'
 
+            chat.add_message(message)
             return message

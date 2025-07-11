@@ -69,9 +69,15 @@ class Model:
 
                 config = llama_cpp_model.to_llama_cpp_config(self.config)
 
-                self.model = llama_cpp_model.LlamaModel(
-                    find_model(self.model_path), config
-                )
+                model = find_model(self.model_path)
+                if not isinstance(model, str):
+                    print(
+                        f'Warning: multiple models are available by {self.model_path}. Taking the first from the list: {model}.'
+                    )
+                    assert len(model) > 0
+                    model = model[0]
+
+                self.model = llama_cpp_model.LlamaModel(model, config)
             case 'lmstudio':
                 if (
                     'lmstudio' not in BACKEND_CAPABILITIES
@@ -107,7 +113,7 @@ class Model:
     ) -> AIMessage | Iterator[AIMessageChunk]:
         if not hasattr(self, 'model'):
             self.init_model()
-        
+
         self.model.assure_loaded()
 
         if response_format is not None and response_format.__repr__() != '':
@@ -133,9 +139,9 @@ class Model:
     ) -> AIMessage:
         if not hasattr(self, 'model'):
             self.init_model()
-        
+
         self.model.assure_loaded()
-        
+
         # if self.backend != 'lmstudio':
         if not hasattr(self.model, 'act'):
             raise NotImplementedError(
@@ -156,7 +162,10 @@ class Model:
         if backend == 'llama_cpp' or backend == 'local':
             from .utils import find_model
 
-            return find_model('*')
+            models = find_model('*')
+            if isinstance(models, str):
+                models = [models]
+            return models
         elif backend == 'lmstudio' or backend == 'remote':
             import lmstudio as lms
 

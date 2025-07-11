@@ -125,9 +125,12 @@ class llm:
             A complete AIMessage containing the generated content.
         """
 
-        chat: Chat = prompt if isinstance(prompt, Chat) else Chat()
-        if not isinstance(prompt, Chat):
+        chat: Chat
+        if isinstance(prompt, str):
+            chat = Chat()
             chat.add_user_message(prompt)
+        else:
+            chat = prompt
 
         chat_completion = self.model.create_chat_completion(
             chat,
@@ -211,8 +214,13 @@ class llm:
         Returns:
             The final AIMessage from the interaction sequence.
         """
-
-        chat = Chat(prompt) if isinstance(prompt, str) else prompt.copy()
+        
+        chat: Chat
+        if isinstance(prompt, str):
+            chat = Chat()
+            chat.add_user_message(prompt)
+        else:
+            chat = prompt.model_copy(deep=True)
 
         if response_format is not None and response_format.__repr__() != '':
             chat.add_message(
