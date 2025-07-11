@@ -1,16 +1,11 @@
-import os
-from llama_cpp import Llama
+from radarange_orchestrator import llm, LLM_Config
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+"""
+Choose cuda gpu to load model weights onto.
+You may use any number of gpus, as well as none (in this case, cpu is used)
+"""
 
-# import torch
-# print("Visible CUDA Devices:", torch.cuda.device_count())  # Should show 2
-# print("Current Device:", torch.cuda.current_device())  # Should match your priority
+conf = LLM_Config(gpus=[1], ctx_size=10000)
+m = llm(model='qwq-32b@q4_k_m', config=conf)
 
-mp = "./models/QwQ-32B-Q4_K_M.gguf"
-
-model = Llama(
-    model_path=mp,
-    n_gpu_layers=-1,
-)
+print(m.respond("Who are you?").content)

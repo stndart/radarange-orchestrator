@@ -1,10 +1,8 @@
 from typing import Iterator, Optional
 
-from radarange_orchestrator.formatting import ResponseFormat
-
-from ..types.tools import Tool
-from ..types.history import AssistantMessage, AssistantMessageFragment
-from ..chat import Chat
+from ..formatting import ResponseFormat
+from ..chat import Chat, AIMessage, AIMessageChunk
+from ..tools import Tool
 
 
 class GenericModel:
@@ -16,8 +14,14 @@ class GenericModel:
         temperature: float = 0.7,
         max_tokens: int = 5000,
         stream: bool = False,
-    ) -> AssistantMessage | Iterator[AssistantMessageFragment]:
+    ) -> AIMessage | Iterator[AIMessageChunk]:
         pass
 
     def count_tokens(self, prompt: str | Chat) -> int:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    def assure_loaded(self) -> None:
         pass

@@ -1,10 +1,6 @@
-import json
-
 from IPython.display import HTML, Markdown, display
-from requests import Response
 
-from ..types.history import AnyChatMessage, ToolCallResponse
-from ..types.tools import ToolResult
+from ..chat.messages import AnyCompleteMessage
 from .extract_tool_calls import remove_think_block
 
 
@@ -41,14 +37,15 @@ def show_final_answer(messages: list[dict], hide_reasoning: bool = True):
 
 
 def display_message(
-    message: AnyChatMessage,
+    message: AnyCompleteMessage,
     skip_reasoning: bool = False,
     truncate_tool_response: bool = True,
 ) -> HTML:
     background = '#1e1e1e'
-    if isinstance(message, ToolCallResponse):
+    message.type
+    if message.type == 'tool':
         background = '#03074a'
-    elif isinstance(message, Response):
+    elif message.type == 'ai':
         background = '#360228'
 
     prefix = """
@@ -79,14 +76,7 @@ def display_message(
     """ % (background)
 
     text = message.content
-    if isinstance(message, Response) and skip_reasoning:
+    if message.type == 'ai' and skip_reasoning:
         text = remove_think_block(text)
-    if isinstance(message, ToolCallResponse) and truncate_tool_response:
-        try:
-            obj = ToolResult(**json.loads(text))
-            obj.stdout = obj.stdout[:200]
-            text = obj.model_dump_json(indent=2)
-        except TypeError: # temporary lm studio compatibility bug - text is not json here
-            text = text
 
     return HTML(prefix + f'<body><div class="container">{text}</div></body>')
