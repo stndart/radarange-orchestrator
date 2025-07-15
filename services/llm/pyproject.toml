@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "radarange-llm"
+version = "0.1.0"
+description = "LLM service for Radarange orchestrator"
+readme = "README.md"
+requires-python = ">=3.10.12"
+dependencies = [
+    "huggingface-hub>=0.30.1",
+    "ipython>=8.35.0",
+    "pydantic>=2.11.3",
+    "typing-extensions>=4.0.0",
+    "html2text>=2025.4.15",
+    "readability-lxml>=0.3.2",
+    "pymupdf>=1.25.5",
+    "lmstudio>=1.4.0",
+    "jsonref>=1.1.0",
+    "langchain>=0.3.26",
+]
+[project.optional-dependencies]
+local = ["llama-cpp-python>=0.3.9"]
+dev = [
+    "ipywidgets>=8.1.7",
+    "jupyter>=1.1.1",
+    "ipykernel>=6.29.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["manager"]       # your actual source directory
+include = ["manager*"]
+exclude = [".venv"]
+
+[tool.uv.workspace]
+members = [
+    "manager/manager",
+]
+
+[tool.ruff]
+target-version = 'py310'
+extend-include = ["*.ipynb"]
+exclude = [
+    '.git',
+    '.ruff_cache',
+    '.venv',
+    'venv',
+]
+
+# Configure single quotes
+[tool.ruff.format]
+quote-style = 'single'

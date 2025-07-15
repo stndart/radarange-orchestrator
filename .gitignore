@@ -5,10 +5,10 @@
 *.gguf
 
 # downloaded files
-notebooks/downloads/*
-notebooks/*
-downloads/*
-examples/downloads/*
+services/llm/notebooks/*
+services/llm/notebooks/downloads/*
+services/llm/downloads/*
+services/llm/examples/downloads/*
 
 uv.lock
-radarange_orchestrator.egg-info 
+*.egg-info 
