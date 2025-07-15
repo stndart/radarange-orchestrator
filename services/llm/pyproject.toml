@@ -29,14 +29,9 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["manager"]       # your actual source directory
-include = ["manager*"]
+where = ["llm"]
+include = ["llm*"]
 exclude = [".venv"]
-
-[tool.uv.workspace]
-members = [
-    "manager/manager",
-]
 
 [tool.ruff]
 target-version = 'py310'
